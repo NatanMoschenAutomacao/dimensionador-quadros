@@ -1,0 +1,1100 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Dimensionador de Quadros</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.57.4/dist/umd/supabase.min.js"></script>
+<style>
+/* Layout: barra de abas fixa no topo; cada aba é uma bancada de trabalho com
+   painéis (pedido -> cargas -> dimensionamento). Laranja RAL 2000 da plaqueta. */
+:root{
+  --bg:#F1F2EF; --surface:#FFFFFF; --surface-2:#F7F8F5; --line:#D9DCD4; --line-strong:#B9BDB2;
+  --ink:#1D2125; --ink-2:#4B525A; --ink-3:#737B83;
+  --accent:#C9580F; --accent-ink:#FFFFFF; --accent-soft:#FBE8DA;
+  --ok:#2F7D4A; --ok-soft:#E1F1E6; --warn:#A86A00; --warn-soft:#FBF0D6; --bad:#B3261E; --bad-soft:#F9E0DE;
+  --fR:#B8322A; --fS:#2B2F33; --fT:#7A7F86;
+  --f-sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#14171A; --surface:#1C2024; --surface-2:#22272C; --line:#30363C; --line-strong:#454C53;
+  --ink:#E8EAEC; --ink-2:#B4BAC0; --ink-3:#8A9198;
+  --accent:#F08A3C; --accent-ink:#1A0E05; --accent-soft:#3A2414;
+  --ok:#6CC38A; --ok-soft:#183324; --warn:#E3B04B; --warn-soft:#3A2E12; --bad:#F2867E; --bad-soft:#3D1A18;
+  --fR:#F0776E; --fS:#D5D9DD; --fT:#8E959C; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#14171A; --surface:#1C2024; --surface-2:#22272C; --line:#30363C; --line-strong:#454C53;
+  --ink:#E8EAEC; --ink-2:#B4BAC0; --ink-3:#8A9198;
+  --accent:#F08A3C; --accent-ink:#1A0E05; --accent-soft:#3A2414;
+  --ok:#6CC38A; --ok-soft:#183324; --warn:#E3B04B; --warn-soft:#3A2E12; --bad:#F2867E; --bad-soft:#3D1A18;
+  --fR:#F0776E; --fS:#D5D9DD; --fT:#8E959C; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-sans);font-size:14px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:1280px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding-block:10px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:.01em}
+.plate{font-family:var(--f-mono);font-size:11px;font-weight:600;background:var(--accent);color:var(--accent-ink);padding:3px 7px;border-radius:3px;letter-spacing:.06em}
+nav.tabs{display:flex;gap:4px;flex-wrap:wrap}
+nav.tabs button{font:inherit;font-weight:500;border:1px solid transparent;background:none;color:var(--ink-2);padding:7px 12px;border-radius:var(--r);cursor:pointer}
+nav.tabs button[aria-selected="true"]{background:var(--accent-soft);color:var(--ink);border-color:var(--accent)}
+nav.tabs button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+main{padding-block:20px 48px}
+section.view{display:flex;flex-direction:column;gap:18px}
+h1{font-size:20px;margin:0;text-wrap:balance}
+h2{font-size:15px;margin:0;font-weight:600;text-wrap:balance}
+.sub{color:var(--ink-3);font-size:13px;margin:2px 0 0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.panel-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.lbl{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);font-weight:600}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field input,.field select{min-width:0}
+input,select{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line-strong);border-radius:4px;padding:6px 8px}
+input[type="number"]{font-family:var(--f-mono)}
+input.num{width:84px;font-family:var(--f-mono);text-align:right}
+.btn{font:inherit;font-weight:600;border-radius:var(--r);padding:8px 14px;cursor:pointer;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:none;border-color:transparent;color:var(--ink-2);padding:6px 8px}
+.tema-btn{margin-left:auto;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line)}
+.tema-btn svg{width:16px;height:16px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.file-drop{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px;border:1.5px dashed var(--line-strong);border-radius:var(--r);background:var(--surface-2)}
+.file-drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);color:var(--ink-2);white-space:nowrap}
+.pill.ex{background:var(--warn-soft);border-color:transparent;color:var(--warn)}
+.pill.ok{background:var(--ok-soft);border-color:transparent;color:var(--ok)}
+tr.fonte24 td{font-style:italic;color:var(--ink-2)}
+.pill.bad{background:var(--bad-soft);border-color:transparent;color:var(--bad)}
+.grid2{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:18px;align-items:start}
+@media (max-width:980px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:4px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle;white-space:nowrap}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);font-weight:600;background:var(--surface-2);position:sticky;top:0}
+td.n,th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+td.mono{font-family:var(--f-mono)}
+tr.sis td{background:var(--surface-2);font-weight:600;font-size:12px;letter-spacing:.03em;color:var(--ink-2)}
+tr.tot td{font-weight:600}
+td.desc{white-space:normal;min-width:180px}
+.tag{font-family:var(--f-mono);font-weight:600;color:var(--accent)}
+.sys{border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.sys-h{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:8px 10px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.sys-h b{font-size:13px}
+.sys-h span{font-size:12px;color:var(--ink-3)}
+.item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;padding:8px 10px;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:0}
+.item .d{font-size:13px;min-width:0;overflow-wrap:anywhere}
+.item .d small{display:block;color:var(--ink-3);font-family:var(--f-mono);font-size:11px}
+.item .ctr{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.item .ctr select{max-width:150px}
+.item.ign .d{color:var(--ink-3)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{border:1px solid var(--line);border-radius:4px;padding:10px 12px;background:var(--surface-2)}
+.kpi .v{font-family:var(--f-mono);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
+.kpi .v small{font-size:12px;color:var(--ink-3);font-weight:500}
+.phase{display:flex;flex-direction:column;gap:6px}
+.ph{display:grid;grid-template-columns:22px minmax(0,1fr) 92px;gap:8px;align-items:center;font-size:12px}
+.ph b{font-family:var(--f-mono)}
+.bar{height:10px;background:var(--surface-2);border:1px solid var(--line);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%}
+.note{font-size:12px;color:var(--ink-3)}
+.warnbox{border-left:3px solid var(--warn);background:var(--warn-soft);padding:8px 10px;border-radius:0 4px 4px 0;font-size:13px}
+.calc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;align-items:start}
+.res{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;border-top:1px solid var(--line);padding-top:10px}
+.res span{color:var(--ink-2);font-size:13px}
+.res b{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
+.res b.big{font-size:17px;color:var(--accent)}
+.formula{font-family:var(--f-mono);font-size:12px;color:var(--ink-3);background:var(--surface-2);padding:6px 8px;border-radius:4px;overflow-x:auto;white-space:nowrap}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:var(--r);font-size:13px;z-index:20;max-width:calc(100% - 32px)}
+.empty{padding:18px;text-align:center;color:var(--ink-3)}
+td input{padding:4px 6px}
+td input.w-txt{width:100%;min-width:140px}
+.reg-sec{display:flex;flex-direction:column;gap:8px}
+@media (prefers-reduced-motion:no-preference){.bar i{transition:width .3s}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><span class="plate">QC</span> Dimensionador de Quadros</div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" id="tab-dim" aria-selected="true" data-view="dim">Dimensionamento</button>
+      <button role="tab" id="tab-calc" aria-selected="false" data-view="calc">Calculadora</button>
+      <button role="tab" id="tab-reg" aria-selected="false" data-view="reg">Regras</button>
+    </nav>
+    <button class="btn ghost tema-btn" id="btn-tema" type="button" aria-label="Alternar modo claro e escuro"></button>
+  </div>
+</header>
+
+<main class="wrap">
+<!-- ============================ DIMENSIONAMENTO ============================ -->
+<section class="view" id="view-dim">
+  <div class="panel">
+    <div class="panel-h">
+      <div><h1>Dimensionar a partir do pedido</h1><p class="sub">Carregue a planilha do pedido (.xlsx). Confira as cargas, ajuste o que precisar e baixe o dimensionamento no formato de sempre.</p></div>
+      <div class="row" style="margin:0;gap:8px;align-items:center"><span class="pill ex" id="src-pill">Exemplo carregado</span><button class="btn" id="btn-limpar" title="Apaga as cargas e os dados para montar do zero">Limpar e começar do zero</button></div>
+    </div>
+    <div class="file-drop" id="drop">
+      <input type="file" id="f-pedido" accept=".xlsx,.xlsm">
+      <span class="note">ou arraste o arquivo aqui</span>
+    </div>
+    <div class="row">
+      <div class="field"><label class="lbl" for="in-num">Nº do projeto</label><input id="in-num" value="0000" style="width:110px"></div>
+      <div class="field" style="flex:1 1 220px"><label class="lbl" for="in-nome">Nome curto do cliente</label><input id="in-nome" value="EXEMPLO"></div>
+      <div class="field"><label class="lbl" for="in-tensao">Tensão (trifásico)</label>
+        <select id="in-tensao"><option value="220">220 V</option><option value="380">380 V</option></select></div>
+      <div class="field"><span class="lbl">Fases</span><label style="display:flex;gap:6px;align-items:center;padding-block:6px;white-space:nowrap"><input type="checkbox" id="in-bal"> Balancear cargas entre as fases</label></div>
+      <div class="field"><span class="lbl">Cliente no pedido</span><span id="cli" style="padding-block:6px">—</span></div>
+    </div>
+    <div id="tensao-aviso" class="warnbox" hidden></div>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <div class="panel-h"><h2>Cargas do pedido</h2><span class="note">tipo, CV/W e quantidade são editáveis</span></div>
+      <div id="itens"></div>
+      <div class="row" style="align-items:flex-end"><div class="field" style="flex:1 1 220px"><label class="lbl" for="add-sis">Sistema da nova carga</label><select id="add-sis"></select></div><button class="btn" id="add-carga">+ Adicionar carga</button></div>
+    </div>
+    <div class="panel">
+      <div class="panel-h"><h2>Resumo</h2><span class="note" id="titulo-dim"></span></div>
+      <div class="kpis" id="kpis"></div>
+      <div class="phase" id="phases"></div>
+      <div id="avisos"></div>
+      <div class="row">
+        <button class="btn primary" id="dl-xlsx">Baixar DIMENSIONAMENTO.xlsx</button>
+        <button class="btn" id="dl-csv">Baixar roteiro EPLAN (.csv)</button>
+      </div>
+      
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-h"><h2>Dimensionamento</h2><span class="note">Informe o comprimento do circuito para ver a queda de tensão (máx. 4%)</span></div>
+    <div class="tbl-wrap"><table id="tbl-dim"></table></div>
+  </div>
+</section>
+
+<!-- ============================ CALCULADORA ============================ -->
+<section class="view" id="view-calc" hidden>
+  <div><h1>Calculadora</h1><p class="sub">Mesmos cálculos da calculadora.xltm, com fator de segurança 1,25.</p></div>
+  <div class="calc-grid">
+    <div class="panel" id="c-motor">
+      <h2>Disjuntor para motor (indutivo)</h2>
+      <div class="row">
+        <div class="field"><label class="lbl" for="cm-cv">Potência (CV)</label><input type="number" id="cm-cv" value="1.5" step="0.01" class="num"></div>
+        <div class="field"><label class="lbl" for="cm-v">Alimentação</label><select id="cm-v"><option value="m220">220 mono</option><option value="t220" selected>220 trifásico</option><option value="t380">380 trifásico</option></select></div>
+        <div class="field"><label class="lbl" for="cm-ef">Rendimento</label><input type="number" id="cm-ef" value="0.75" step="0.01" class="num"></div>
+        <div class="field"><label class="lbl" for="cm-fp">FP</label><input type="number" id="cm-fp" value="0.72" step="0.01" class="num"></div>
+      </div>
+      <div class="formula">I = CV × 736 / (V × [1,73] × η × FP)</div>
+      <div class="res" id="cm-res"></div>
+    </div>
+    <div class="panel" id="c-res">
+      <h2>Disjuntor para carga resistiva</h2>
+      <div class="row">
+        <div class="field"><label class="lbl" for="cr-w">Potência (W)</label><input type="number" id="cr-w" value="3000" class="num"></div>
+        <div class="field"><label class="lbl" for="cr-v">Alimentação</label><select id="cr-v"><option value="m220">220 mono</option><option value="t220">220 trifásico</option><option value="t380">380 trifásico</option></select></div>
+      </div>
+      <div class="formula">I = W / (V × [1,73])</div>
+      <div class="res" id="cr-res"></div>
+    </div>
+    <div class="panel" id="c-rea">
+      <h2>Disjuntor para carga reativa (lâmpadas)</h2>
+      <div class="row">
+        <div class="field"><label class="lbl" for="ce-w">Potência (W)</label><input type="number" id="ce-w" value="1200" class="num"></div>
+        <div class="field"><label class="lbl" for="ce-v">Alimentação</label><select id="ce-v"><option value="m220">220 mono</option><option value="t220">220 trifásico</option><option value="t380">380 trifásico</option></select></div>
+        <div class="field"><label class="lbl" for="ce-fp">FP</label><input type="number" id="ce-fp" value="0.85" step="0.01" class="num"></div>
+      </div>
+      <div class="formula">I = (W / FP) / (V × [1,73])</div>
+      <div class="res" id="ce-res"></div>
+    </div>
+    <div class="panel" id="c-sec">
+      <h2>Seção do cabo por queda de tensão</h2>
+      <div class="row">
+        <div class="field"><label class="lbl" for="cs-t">Circuito</label><select id="cs-t"><option value="2">mono / bifásico</option><option value="1.732">trifásico</option></select></div>
+        <div class="field"><label class="lbl" for="cs-l">Comprimento (m)</label><input type="number" id="cs-l" value="50" class="num"></div>
+        <div class="field"><label class="lbl" for="cs-i">Corrente (A)</label><input type="number" id="cs-i" value="10" class="num"></div>
+        <div class="field"><label class="lbl" for="cs-v">Tensão (V)</label><input type="number" id="cs-v" value="220" class="num"></div>
+        <div class="field"><label class="lbl" for="cs-p">Queda adm. (%)</label><input type="number" id="cs-p" value="4" class="num"></div>
+      </div>
+      <div class="formula">S = (k × ρ × L × I) / (V × ΔV%) · ρ = 1/57 · k = 2 ou √3</div>
+      <div class="res" id="cs-res"></div>
+    </div>
+    <div class="panel" id="c-qt">
+      <h2>Queda de tensão de um circuito</h2>
+      <div class="row">
+        <div class="field"><label class="lbl" for="cq-t">Circuito</label><select id="cq-t"><option value="2">mono / bifásico</option><option value="1.732">trifásico</option></select></div>
+        <div class="field"><label class="lbl" for="cq-l">Comprimento (m)</label><input type="number" id="cq-l" value="50" class="num"></div>
+        <div class="field"><label class="lbl" for="cq-i">Corrente (A)</label><input type="number" id="cq-i" value="10" class="num"></div>
+        <div class="field"><label class="lbl" for="cq-v">Tensão (V)</label><input type="number" id="cq-v" value="220" class="num"></div>
+        <div class="field"><label class="lbl" for="cq-s">Seção (mm²)</label><select id="cq-s"></select></div>
+      </div>
+      <div class="formula">ΔV = k × L × (0,01754 / S) × I</div>
+      <div class="res" id="cq-res"></div>
+    </div>
+    <div class="panel" id="c-conv">
+      <h2>Conversões</h2>
+      <div class="row">
+        <div class="field"><label class="lbl" for="cv-x">Valor</label><input type="number" id="cv-x" value="1" step="any" class="num"></div>
+        <div class="field" style="flex:1 1 180px"><label class="lbl" for="cv-k">De → para</label>
+          <select id="cv-k">
+            <option value="cvw">CV → W (× 735,499)</option>
+            <option value="wcv">W → CV (× 0,00135962)</option>
+            <option value="hpw">HP → W (× 745,7)</option>
+            <option value="nmcv">Nm → CV (× 0,001341022)</option>
+            <option value="vaw">VA → W (× 0,8)</option>
+            <option value="wva">W → VA (× 1,25)</option>
+          </select></div>
+      </div>
+      <div class="res" id="cv-res"></div>
+    </div>
+    <div class="panel" id="c-ele">
+      <h2>Eletroduto e eletrocalha</h2>
+      <p class="note">Quantidade de cabos de cada bitola. A taxa de ocupação segue a NBR 5410 6.2.11.1.6 para eletroduto (53% com 1 cabo, 31% com 2, 40% com 3 ou mais) e é de 30% para eletrocalha.</p>
+      <div class="tbl-wrap"><table id="ele-tbl"></table></div>
+      <div class="res" id="ele-res"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ REGRAS ============================ -->
+<section class="view" id="view-reg" hidden>
+  <div class="panel-h">
+    <div><h1>Regras de dimensionamento</h1><p class="sub" id="reg-src">Regras padrão (deduzidas de 14 projetos + calculadora).</p></div>
+    <div class="row">
+      <button class="btn" id="reg-reset">Restaurar padrão</button>
+      <button class="btn primary" id="reg-save">Salvar para todos</button>
+    </div>
+  </div>
+  <div class="panel reg-sec"><h2>Parâmetros</h2><div class="tbl-wrap"><table id="reg-par"></table></div></div>
+  <div class="panel reg-sec"><div class="panel-h"><h2>Catálogo de equipamentos</h2><span class="note">A primeira linha cujo texto aparece na descrição vale. Use + para exigir mais de um texto.</span></div>
+    <div class="tbl-wrap"><table id="reg-cat"></table></div><button class="btn" id="cat-add">+ Linha</button></div>
+  <div class="panel reg-sec"><div class="panel-h"><h2>Sistemas</h2><span class="note">Use | para alternativas no título do pedido.</span></div>
+    <div class="tbl-wrap"><table id="reg-sis"></table></div><button class="btn" id="sis-add">+ Linha</button></div>
+  <div class="panel reg-sec"><h2>Valores comerciais</h2>
+    <div class="row">
+      <div class="field" style="flex:1 1 320px"><label class="lbl" for="reg-fq">Faixas do disjuntor motor (A)</label><input id="reg-fq"></div>
+      <div class="field" style="flex:1 1 320px"><label class="lbl" for="reg-dg">Disjuntor geral (A)</label><input id="reg-dg"></div>
+    </div></div>
+</section>
+</main>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script>
+"use strict";
+/* =============================== REGRAS PADRÃO =============================== */
+const DEFAULT_RULES = {
+  params: {
+    RENDIMENTO_MOTOR: 0.75, FP_MOTOR: 0.72, FP_MOTOR_24VDC: 0.5, FP_ILUMINACAO: 0.85,
+    FATOR_FAIXA_Q: 1.25, FAIXA_Q_MINIMA: 0.63,
+    FATOR_DISJ_GERAL_220V: 1.25, FATOR_DISJ_GERAL_380V: 1.5,
+    DISJ_GERAL_MINIMO_220V: 32, DISJ_GERAL_MINIMO_380V: 16,
+    FATOR_PROTECAO_24VDC: 2, MOTORES_24VDC_POR_FONTE: 2, W_MAX_2_MOTORES_POR_FONTE: 140, PROTECAO_24VDC_MINIMA: 4, FATOR_PROTECAO_FONTE_24VDC: 2,
+    ILUMINACAO_W_MAX_POR_CIRCUITO: 0, PROTECAO_ILUMINACAO: "16A",
+    PROGRAMADORES_COM_TRAFO: "GALCON",
+    CABO_MOTOR_3F: "(FFF+T) 2,5 / 750 / 70°", CABO_BIFASICO: "(FF) 2,5 / 750 / 70°", CABO_MONOFASICO: "(F+N) 2,5 / 750 / 70°",
+    QUEDA_MAX_PCT: 4,
+    FP_ILUMINACAO_MONO: 0.7, PROTECAO_ILUMINACAO_MONO: "10A",
+    FATOR_PROTECAO_RESISTIVO: 1,
+    CABO_POR_PROTECAO: "16:2,5; 25:4; 32:6; 50:10; 63:16; 80:25; 100:35; 125:50; 160:70"
+  },
+  paramInfo: {
+    RENDIMENTO_MOTOR: "VA = W / rendimento / FP", FATOR_FAIXA_Q: "faixa do disjuntor motor cobre In × fator (calculadora)",
+    FAIXA_Q_MINIMA: "nunca abaixo da faixa 0,63–1A", FATOR_DISJ_GERAL_220V: "geral = próximo comercial ≥ I da fase mais carregada × fator",
+    FP_MOTOR_24VDC: "motoredutor importado 24Vcc", FATOR_PROTECAO_24VDC: "DSJ do motor 24Vcc ≥ I × fator (2/4/6/10A)",
+    MOTORES_24VDC_POR_FONTE: "máximo de motores 24Vcc por fonte (cada fonte tem seu DSJ de entrada)",
+    W_MAX_2_MOTORES_POR_FONTE: "motor 24Vcc até esta potência (W): 2 por fonte; acima: 1 por fonte",
+    PROTECAO_24VDC_MINIMA: "menor DSJ de motor 24Vcc (A)",
+    FATOR_PROTECAO_FONTE_24VDC: "DSJ de entrada da fonte ≥ I da fonte × fator (mín. 4A)",
+    ILUMINACAO_W_MAX_POR_CIRCUITO: "0 = um circuito só (ou o nº de ACIONAMENTOS do pedido). Acima de 0: divide em circuitos de até X W",
+    PROGRAMADORES_COM_TRAFO: "programador com este texto pede trafo 220/24Vca (separe com |)",
+    QUEDA_MAX_PCT: "alerta de queda de tensão na tabela",
+    FATOR_DISJ_GERAL_380V: "idem, em 380V. Cargas resistivas (aquecedor) entram com fator 1, sem folga de partida",
+    FP_ILUMINACAO_MONO: "iluminação monofásica (pedido diz MONOFÁSICA, ou quadro em 380V)",
+    FATOR_PROTECAO_RESISTIVO: "disjuntor do aquecedor = próximo comercial ≥ I × fator",
+    CABO_POR_PROTECAO: "seção do cabo do aquecedor pela proteção: até A → mm²"
+  },
+  catalogo: [
+    {contem:"CHAVE BOIA", tipo:"IGNORAR", cv:"", w:"", nome:"", faixa:"", obs:"só comando"},
+    {contem:"VALVULA", tipo:"IGNORAR", cv:"", w:"", nome:"", faixa:"", obs:"só comando"},
+    {contem:"ZANNAFERTI", tipo:"IGNORAR", cv:"", w:"", nome:"", faixa:"", obs:""},
+    {contem:"MOTOREDUTOR+IMPORTADO+100", tipo:"MOTOR_24VDC", cv:"", w:140, nome:"SOMBREAMENTO", faixa:"", obs:"6164: 100W → 140W"},
+    {contem:"MOTOREDUTOR+IMPORTADO+180", tipo:"MOTOR_24VDC", cv:"", w:180, nome:"SOMBREAMENTO", faixa:"", obs:""},
+    {contem:"MOTOREDUTOR+IMPORTADO", tipo:"MOTOR_24VDC", cv:"", w:120, nome:"SOMBREAMENTO", faixa:"", obs:"140Nm = 120W"},
+    {contem:"MOTOREDUTOR+MACOPEMA", tipo:"MOTOR_3F", cv:0.21, w:"", nome:"SOMBREAMENTO", faixa:"", obs:"1/6 CV → 0,21 CV"},
+    {contem:"EXAUSTOR+36", tipo:"MOTOR_3F", cv:0.75, w:"", nome:"EXAUSTOR", faixa:"", obs:"1 CV → 0,75 CV"},
+    {contem:"EXAUSTOR", tipo:"MOTOR_3F", cv:"", w:"", nome:"EXAUSTOR", faixa:"", obs:""},
+    {contem:"CIRCULADOR", tipo:"MOTOR_3F", cv:"", w:"", nome:"CIRCULADOR", faixa:"1,6 - 2,5", obs:"6106"},
+    {contem:"AGITADOR", tipo:"MOTOR_2F", cv:"", w:800, nome:"AGITADOR", faixa:"", obs:"800W bifásico"},
+    {contem:"AQUECEDOR", tipo:"RESISTIVO_3F", cv:"", w:"", nome:"AQUECEDOR ELÉTRICO", faixa:"", acompanha:"DISSIPADOR:0,75", obs:"6112: cada aquecedor leva 1 dissipador 0,75 CV"},
+    {contem:"LAMPADA", tipo:"ILUMINACAO", cv:"", w:"", nome:"", faixa:"", obs:"W × quantidade"}
+  ],
+  sistemas: [
+    {contem:"REFRIGERACAO|PAD/FAN|PAD FAN|EXAUSTAO|EXAUSTORES", titulo:"SISTEMA DE REFRIGERAÇÃO PAD/FAN", ordem:1, motor:"EXAUSTOR", bomba:"MOTOBOMBA PAD/FAN"},
+    {contem:"CIRCULACAO", titulo:"SISTEMA DE CIRCULAÇÃO DE AR", ordem:2, motor:"CIRCULADOR", bomba:""},
+    {contem:"MICROASPERSAO", titulo:"SISTEMA DE MICROASPERSÃO", ordem:3, motor:"MICROASPERSÃO", bomba:"MICROASPERSÃO"},
+    {contem:"GOTEJO|GOTEJAMENTO", titulo:"SISTEMA DE GOTEJO", ordem:4, motor:"GOTEJO", bomba:"GOTEJO"},
+    {contem:"AQUECIMENTO", titulo:"SISTEMA DE AQUECIMENTO ELÉTRICO", ordem:5, motor:"", bomba:"", cor:"D9D9D9"},
+    {contem:"NEBULIZACAO", titulo:"SISTEMA DE NEBULIZAÇÃO", ordem:5, motor:"NEBULIZAÇÃO", bomba:"NEBULIZAÇÃO"},
+    {contem:"CORTINA", titulo:"SISTEMA DE SOMBREAMENTO / CORTINA / JANELA IMPORTADO", ordem:6, motor:"CORTINA", bomba:"", cor:"C9C9C9"},
+    {contem:"MOVIMENTACAO|SOMBREAMENTO", titulo:"SISTEMA DE SOMBREAMENTO", ordem:6, motor:"SOMBREAMENTO", bomba:"", cor:"C9C9C9"},
+    {contem:"FOTOPERIODO|ILUMINACAO", titulo:"SISTEMA DE ILUMINAÇÃO", ordem:8, motor:"", bomba:""}
+  ],
+  faixasQ: [[0.1,0.16],[0.16,0.25],[0.25,0.4],[0.4,0.63],[0.63,1],[1,1.6],[1.6,2.5],[2.5,4],[4,6.3],[6.3,10],[10,16],[16,20],[20,25],[25,32]],
+  geral: [16,20,25,32,40,50,63,80,100,125,160,200,250]
+};
+const TIPOS = {IGNORAR:"Não entra", MOTOR_3F:"Motor trifásico", MOTOR_2F:"Motor bifásico", MOTOR_24VDC:"Motor 24Vcc importado", RESISTIVO_3F:"Aquecedor (resistivo 3F)", ILUMINACAO:"Iluminação", CARGA_W:"Carga monofásica"};
+const SECOES = [1.5,2.5,4,6,10,16,25,35,50,70,95,120,150];
+
+/* =============================== UTILIDADES =============================== */
+const $ = s => document.querySelector(s);
+const clone = o => JSON.parse(JSON.stringify(o));
+function norm(s){ return (s==null?"":String(s)).normalize("NFKD").replace(/[̀-ͯ]/g,"").replace(/\s+/g," ").trim().toUpperCase(); }
+function numBR(s){
+  if (s==null || s==="") return null;
+  if (typeof s === "number") return s;
+  const t = norm(s);
+  let m = t.match(/(\d+)\s*\/\s*(\d+)/); if (m) return +m[1] / +m[2];
+  m = t.match(/\d{1,3}(?:\.\d{3})+(?!\d)/); if (m) return parseFloat(m[0].replace(/\./g, ""));
+  m = t.match(/\d+(?:[.,]\d+)?/); return m ? parseFloat(m[0].replace(",", ".")) : null;
+}
+function fmtBR(x, casas=2){ if (x==null || isNaN(x)) return "—"; let s = (+x).toFixed(casas); if (s.includes(".")) s = s.replace(/0+$/,"").replace(/\.$/,""); return s.replace(".", ","); }
+function fmtN(x, casas=2){ if (x==null || isNaN(x)) return "—"; return (+x).toLocaleString("pt-BR",{minimumFractionDigits:casas,maximumFractionDigits:casas}); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>t.hidden=true, 3200); }
+const P = (R,k,d) => (R.params[k]===undefined || R.params[k]==="" || R.params[k]===null) ? d : R.params[k];
+const PF = (R,k,d) => { const v = parseFloat(String(P(R,k,d)).replace(",", ".")); return isNaN(v) ? d : v; };
+
+function itemCatalogo(R, desc){
+  const d = norm(desc);
+  for (const it of R.catalogo){
+    const partes = String(it.contem||"").split("+").map(norm).filter(Boolean);
+    if (partes.length && partes.every(p => d.includes(p))) return it;
+  }
+  return null;
+}
+function infoSistema(R, titulo){
+  const t = norm(titulo);
+  for (const s of R.sistemas){
+    const alts = String(s.contem||"").split("|").map(norm).filter(Boolean);
+    if (alts.some(a => t.includes(a))) return s;
+  }
+  return {titulo, ordem:90, motor:"", bomba:""};
+}
+function infoSistemaPed(R, s){
+  const info = infoSistema(R, s.titulo);
+  if (R.sistemas.includes(info)) return info;
+  const descs = (s.itens||[]).map(it => it.desc).join(" | ");
+  const porItem = infoSistema(R, descs);
+  return R.sistemas.includes(porItem) ? porItem : info;
+}
+function faixaQ(R, corrente){
+  const alvo = corrente * PF(R,"FATOR_FAIXA_Q",1.25), minimo = PF(R,"FAIXA_Q_MINIMA",0.63);
+  for (const [lo,hi] of R.faixasQ) if (hi >= alvo && lo >= minimo - 1e-9) return [lo,hi];
+  return R.faixasQ[R.faixasQ.length-1];
+}
+function disjGeral(R, iMax, tensao){
+  const alvo = iMax * PF(R,`FATOR_DISJ_GERAL_${tensao}V`,1.25), minimo = PF(R,`DISJ_GERAL_MINIMO_${tensao}V`,16);
+  for (const a of R.geral) if (a >= alvo && a >= minimo) return a;
+  return R.geral[R.geral.length-1];
+}
+
+function caboPorProtecao(R, amp){
+  const t = String(P(R,"CABO_POR_PROTECAO","")).split(";").map(x => x.split(":").map(y => parseFloat(y.trim().replace(",", ".")))).filter(x => x.length===2 && !isNaN(x[0]));
+  t.sort((a,b)=>a[0]-b[0]); const r = t.find(([a]) => a >= amp); return r ? r[1] : (t.length ? t[t.length-1][1] : 2.5);
+}
+const COMERCIAIS = [2,4,6,10,16,20,25,32,40,50,63,80,100,125,160];
+/* =============================== LEITURA DO PEDIDO =============================== */
+function cellText(v){
+  if (v==null) return null;
+  if (typeof v === "object"){
+    if (v.richText) return v.richText.map(r=>r.text).join("");
+    if (v.text !== undefined) return v.text;
+    if (v.result !== undefined) return v.result;
+    if (v instanceof Date) return v.toLocaleDateString("pt-BR");
+    return null;
+  }
+  return v;
+}
+/** rows: array de linhas, cada uma [A,B,C,D,E,F,...] */
+function lerPedido(rows){
+  const L = rows.map(r => { const a = (r||[]).slice(0,8).map(cellText); while (a.length < 8) a.push(null); return a; });
+  const ped = {titulo:null, cliente:null, cidade:null, obs:"", sistemas:[]};
+  let atual = null;
+  for (let i=0;i<L.length;i++){
+    const r = L[i], a = r[0], na = norm(a);
+    if (i===0 && a) ped.titulo = String(a);
+    if (na === "CLIENTE"){ ped.cliente = r[1]; ped.cidade = r[4]; }
+    if (na.startsWith("OBS")) ped.obs = String(a);
+    if (na === "EQUIPAMENTO"){
+      const tit = i>0 && L[i-1][0] ? String(L[i-1][0]).trim() : "SISTEMA";
+      atual = {titulo:tit, itens:[], programador:null}; ped.sistemas.push(atual); continue;
+    }
+    if (!atual || !a) continue;
+    if (na.startsWith("PROGRAMADOR")){ atual.programador = r[3]; continue; }
+    const prox = i+1 < L.length ? norm(L[i+1][0]) : "";
+    if (prox === "EQUIPAMENTO") continue;
+    if (r[3]==null && r[4]==null) continue;
+    atual.itens.push({desc:String(a).trim(), potencia:r[3], qtd:r[4], energia:r[5]});
+  }
+  return ped;
+}
+function tensaoDoPedido(ped){
+  let t = norm(ped.obs);
+  for (const s of ped.sistemas) for (const it of s.itens) t += " " + norm(it.energia);
+  const m = t.match(/(380|220)\s*V/); return m ? +m[1] : null;
+}
+/** classificação inicial de um item (o usuário pode editar depois) */
+function classificar(R, item){
+  const cat = itemCatalogo(R, item.desc);
+  const v = numBR(item.potencia), pot = norm(item.potencia);
+  const qtd = Math.max(1, Math.round(numBR(item.qtd) || 1));
+  if (cat){
+    if (norm(cat.tipo) === "IGNORAR") return {tipo:"IGNORAR", cv:null, w:null, qtd, nome:"", faixa:""};
+    let cv = cat.cv===""||cat.cv==null ? null : +cat.cv, w = cat.w===""||cat.w==null ? null : +cat.w;
+    const tipo = norm(cat.tipo);
+    if (cv==null && w==null){ if (tipo==="MOTOR_3F"||tipo==="MOTOR_2F") cv = v; else w = v; }
+    return {tipo, cv, w, qtd, nome:cat.nome||"", faixa:cat.faixa||"", acompanha:cat.acompanha||""};
+  }
+  if (v==null) return {tipo:"IGNORAR", cv:null, w:null, qtd, nome:"", faixa:""};
+  if (/(^|[^0-9])24\s*V/.test(norm(item.energia)) && pot.includes("W")) return {tipo:"MOTOR_24VDC", cv:null, w:v, qtd, nome:"", faixa:""};
+  if (pot.includes("CV")) return {tipo:"MOTOR_3F", cv:v, w:null, qtd, nome:"", faixa:""};
+  if (pot.includes("W")) return {tipo:"CARGA_W", cv:null, w:v, qtd, nome:"", faixa:"", semRegra:true};
+  return {tipo:"IGNORAR", cv:null, w:null, qtd, nome:"", faixa:""};
+}
+
+/* =============================== DIMENSIONAMENTO =============================== */
+function dimensionar(ped, R, tensao, balancear){
+  const tri = tensao === 380;
+  const vfn = tri ? 220 : 127, v3f = tri ? 657.4 : 380.3, vLinha = tensao;
+  const efic = PF(R,"RENDIMENTO_MOTOR",0.75), fp = PF(R,"FP_MOTOR",0.72), fpdc = PF(R,"FP_MOTOR_24VDC",0.5), fpl = PF(R,"FP_ILUMINACAO",0.85);
+  const wLuz = PF(R,"ILUMINACAO_W_MAX_POR_CIRCUITO",0);
+  const cabo3f = P(R,"CABO_MOTOR_3F","(FFF+T) 2,5 / 750 / 70°"), caboFF = P(R,"CABO_BIFASICO","(FF) 2,5 / 750 / 70°"), caboFN = P(R,"CABO_MONOFASICO","(F+N) 2,5 / 750 / 70°");
+  const progTrafo = String(P(R,"PROGRAMADORES_COM_TRAFO","GALCON")).split("|").map(norm).filter(Boolean);
+  let usaTrafo = false; const meta = [], avisos = [];
+
+  for (const s of ped.sistemas){
+    const prog = norm(s.programador);
+    if (progTrafo.some(k => prog.includes(k))) usaTrafo = true;
+    const info = infoSistemaPed(R, s);
+    const circs = [];
+    for (const it of s.itens){
+      const c = it.ed; if (!c || c.tipo === "IGNORAR") continue;
+      const dn = norm(it.desc), qtd = Math.max(1, Math.round(+c.qtd || 1));
+      if (c.semRegra && c.tipo === "CARGA_W") avisos.push(`“${it.desc}” não está no catálogo: tratado como carga monofásica. Confira o tipo.`);
+      if (c.tipo === "ILUMINACAO"){
+        const w = +c.w || 0, total = w * qtd;
+        const m = norm(s.titulo).match(/(\d+)\s*ACIONAMENTOS/);
+        const mono = tri || norm(it.energia).includes("MONO");
+        const n = m ? +m[1] : (wLuz > 0 ? Math.max(1, Math.ceil(total / wLuz)) : 1);
+        const por = Math.floor(qtd / n), resto = qtd - por*n;
+        for (let k=0;k<n;k++){ const q = por + (k<resto?1:0);
+          const unico = !mono && n === 1;
+        const nome = mono ? (n > 1 ? `ILUMINAÇÃO MONOFASICA ${k+1}` : "ILUMINAÇÃO MONOFASICA") : unico ? `X ${q} - LÂMPADAS LED ${fmtBR(w)}W` : `CIRCUITO ${k+1} - x${q} - LÂMPADA LED ${fmtBR(w)}W`;
+          circs.push({tipo:"ILUMINACAO", mono, unico, nome, w:q*w, cv:null, desc:it.desc}); }
+        continue;
+      }
+      let base;
+      if (c.tipo === "MOTOR_24VDC" && info.motor) base = info.motor;
+      else if (c.nome) base = c.nome;
+      else if (dn.includes("EXAUSTOR")) base = "EXAUSTOR";
+      else if (dn.includes("BOMBA") && info.bomba) base = info.bomba;
+      else base = info.motor || dn.slice(0,30);
+      const ac = String(c.acompanha||"").split(":"), acNome = ac[0] ? ac[0].trim() : "", acCv = ac[1] ? numBR(ac[1]) : null;
+      for (let k=0;k<qtd;k++){
+        circs.push({tipo:c.tipo, base, nome:null, sempreNum:c.tipo==="RESISTIVO_3F", cv:c.cv==null||c.cv===""?null:+c.cv, w:c.w==null||c.w===""?null:+c.w, desc:it.desc, faixaCat:c.faixa||""});
+        if (acNome && acCv) circs.push({tipo:"MOTOR_3F", base:acNome, nome:null, sempreNum:true, cv:acCv, w:null, desc:it.desc, faixaCat:""});
+      }
+    }
+    circs.sort((a,b) => (norm(a.desc).includes("EXAUSTOR")?0:1) - (norm(b.desc).includes("EXAUSTOR")?0:1));
+    const tot = {}, cont = {};
+    for (const c of circs) if (c.nome==null) tot[c.base] = (tot[c.base]||0) + 1;
+    for (const c of circs) if (c.nome==null){ if (tot[c.base] > 1 || c.sempreNum){ cont[c.base]=(cont[c.base]||0)+1; c.nome = `${c.base} ${cont[c.base]}`; } else c.nome = c.base; }
+    const valv = s.itens.filter(it => norm(it.desc).includes("VALVULA")).reduce((a,it)=>a+(Math.round(numBR(it.qtd)||0)),0);
+    meta.push({ordem:+info.ordem||90, titulo:info.titulo||s.titulo, cor:info.cor||"", tituloPedido:s.titulo, programador:s.programador, valvulas:valv,
+               boia:s.itens.some(it=>norm(it.desc).includes("BOIA")), circs});
+  }
+  meta.sort((a,b)=>a.ordem-b.ordem);
+
+  const comando = [];
+  if (tri){
+    comando.push({tipo:"FONTE", nome:"COMANDO FONTE", w:120, va:120/0.9, fases:"R", cabo:"(F+N) 2,5 / 750 / 70°", tag:"DSJ_1", disp:"MINIDISJUNTOR MONOFÁSICO", prot:"10A"});
+    if (usaTrafo) comando.push({tipo:"TRAFO", nome:"COMANDO TRANSFORMADOR", w:null, va:50, fases:"R", cabo:"(F+N) 2,5 / 750 / 70°", tag:"DSJ_3", disp:"MINIDISJUNTOR MONOFÁSICO", prot:"10A"});
+  } else {
+    comando.push({tipo:"FONTE", nome:"COMANDO FONTE", w:120, va:120/0.9, fases:"R/S", cabo:"(FF+T) 2,5 / 750 / 70°", tag:"DSJ_1", disp:"MINIDISJUNTOR BIFÁSICO", prot:"10A"});
+    if (usaTrafo) comando.push({tipo:"TRAFO", nome:"COMANDO TRANSFORMADOR", w:null, va:50, fases:"R/S", cabo:"(FF) 2,5 / 750 / 70°", tag:"DSJ_3", disp:"MINIDISJUNTOR BIFÁSICO", prot:"10A"});
+  }
+  const carga = {R:0,S:0,T:0}, cargaGeral = {R:0,S:0,T:0};
+  const fatGeral = PF(R,`FATOR_DISJ_GERAL_${tensao}V`,1.25);
+  const somaFase = c => { const fs = c.fases.split("/"); for (const f of fs){ carga[f] += c.va / fs.length; cargaGeral[f] += c.va / fs.length * (c.resistivo ? 1 : fatGeral); } };
+  for (const c of comando){ c.corrente = c.va / vfn; somaFase(c); }
+
+  let nq = 0, ndsj = usaTrafo ? 4 : 2, fonteDc = null, nFonte = 0;
+  const dcPorFonte = Math.max(1, Math.round(PF(R,"MOTORES_24VDC_POR_FONTE",2))), wMax2 = PF(R,"W_MAX_2_MOTORES_POR_FONTE",140);
+  const minDc = PF(R,"PROTECAO_24VDC_MINIMA",4), fatFonte = PF(R,"FATOR_PROTECAO_FONTE_24VDC",2);
+  const somaF = f => f.split("/").reduce((a,x)=>a+carga[x],0);
+  const menor = ops => ops.reduce((b,f) => somaF(f) < somaF(b) ? f : b, ops[0]);
+  const faseMono = padrao => balancear ? menor(["R","S","T"]) : padrao;
+  const faseBi = padrao => balancear ? menor(["R/S","S/T","R/T"]) : padrao;
+  for (const m of meta){ const novos = []; for (const c of m.circs){
+    if (c.tipo === "MOTOR_3F" || c.tipo === "MOTOR_2F"){
+      if (c.cv != null) c.w = c.cv * 736;
+      c.va = c.w / efic / fp; nq++; c.tag = `Q${nq}`; c.disp = "DISJUNTOR MOTOR";
+      c.fases = c.tipo === "MOTOR_3F" ? "R/S/T" : faseBi("R/S"); c.cabo = cabo3f; c.corrente = c.va / v3f;
+      let lo, hi;
+      if (c.faixaCat){ const n = String(c.faixaCat).match(/\d+(?:[.,]\d+)?/g)||[]; lo = parseFloat((n[0]||"0").replace(",", ".")); hi = parseFloat((n[1]||"0").replace(",", ".")); }
+      else [lo,hi] = faixaQ(R, c.corrente);
+      c.faixa = [lo,hi]; c.prot = `${fmtBR(lo)} - ${fmtBR(hi)}A`;
+    } else if (c.tipo === "MOTOR_24VDC"){
+      c.va = c.w / fpdc;
+      const cap = c.w <= wMax2 ? dcPorFonte : 1;
+      if (!fonteDc || fonteDc.motores.length >= fonteDc.cap || cap < fonteDc.motores.length + 1){
+        ndsj++; nFonte++;
+        const fs = tri ? faseMono("R") : faseBi("R/S");
+        fonteDc = {tipo:"FONTE_24VDC", nome:`FONTE 24Vcc ${nFonte}`, tag:`DSJ_${ndsj}`, disp:tri ? "MINIDISJUNTOR MONOFÁSICO" : "MINIDISJUNTOR BIFÁSICO", fases:fs,
+                   cabo: tri ? caboFN : caboFF, cap, motores:[], w:0, va:0, semCarga:true};
+        novos.push(fonteDc);
+      }
+      fonteDc.motores.push(c); fonteDc.w += c.w; fonteDc.va += c.va; fonteDc.corrente = fonteDc.va / vfn;
+      fonteDc.prot = `${Math.max(minDc, COMERCIAIS.find(a => a >= fonteDc.corrente * fatFonte) || 160)}A`;
+      c.dsjFonte = fonteDc.tag; c.fonte = fonteDc.nome;
+      ndsj++; c.tag = `DSJ_${ndsj}`; c.disp = "MINIDISJUNTOR MONOFÁSICO";
+      c.fases = fonteDc.fases; c.cabo = tri ? caboFN : caboFF; c.corrente = c.va / vfn;
+      const alvo = c.corrente * PF(R,"FATOR_PROTECAO_24VDC",2);
+      c.prot = `${Math.max(minDc, [2,4,6,10,16].find(a => a >= alvo) || 16)}A`;
+    } else if (c.tipo === "RESISTIVO_3F"){
+      c.va = c.w; ndsj++; c.tag = `DSJ_${ndsj}`; c.disp = "MINIDISJUNTOR TRIFÁSICO"; c.resistivo = true;
+      c.fases = "R/S/T"; c.corrente = c.va / v3f;
+      const amp = COMERCIAIS.find(a => a >= c.corrente * PF(R,"FATOR_PROTECAO_RESISTIVO",1)) || 160;
+      c.prot = `${amp}A`; c.cabo = `(FFF+T) ${fmtBR(caboPorProtecao(R, amp))} / 750 / 70°`;
+    } else if (c.tipo === "ILUMINACAO" && c.mono){
+      c.va = c.w / PF(R,"FP_ILUMINACAO_MONO",0.7); ndsj++; c.tag = `DSJ_${ndsj}`; c.disp = "MINIDISJUNTOR MONOFÁSICO";
+      c.fases = ["S","T","R"].reduce((b,f) => carga[f] < carga[b] ? f : b, "S");
+      c.cabo = caboFN; c.corrente = c.va / vfn;
+      const base = numBR(P(R,"PROTECAO_ILUMINACAO_MONO","10A")) || 10;
+      c.prot = `${Math.max(base, COMERCIAIS.find(a => a >= c.corrente*1.25) || base)}A`;
+    } else if (c.tipo === "ILUMINACAO" && c.unico){
+      c.va = c.w / fpl; ndsj++; c.tag = `DSJ_${ndsj}`; c.disp = "MINIDISJUNTOR BIFÁSICO";
+      c.fases = "R/S/T"; c.cabo = caboFF; c.corrente = c.w / (vLinha * 1.732);
+      const pBase = numBR(P(R,"PROTECAO_ILUMINACAO","16A")) || 16;
+      c.prot = `${Math.max(pBase, COMERCIAIS.find(a => a >= c.corrente * 1.25) || pBase)}A`;
+    } else if (c.tipo === "ILUMINACAO"){
+      c.va = c.w / fpl; ndsj++; c.tag = `DSJ_${ndsj}`; c.disp = "MINIDISJUNTOR BIFÁSICO";
+      const pares = ["S/T","R/T","R/S"];
+      c.fases = pares.reduce((best,p) => { const v = p.split("/").reduce((a,f)=>a+carga[f],0); return (best==null || v < best.v) ? {p,v} : best; }, null).p;
+      c.cabo = caboFF; c.corrente = c.va / vfn;
+      const pBase = numBR(P(R,"PROTECAO_ILUMINACAO","16A")) || 16;
+      c.prot = `${Math.max(pBase, COMERCIAIS.find(a => a >= c.corrente * 1.25) || pBase)}A`;
+    } else {
+      c.va = c.w / 0.85; ndsj++; c.tag = `DSJ_${ndsj}`; c.disp = "MINIDISJUNTOR MONOFÁSICO";
+      c.fases = faseMono("R"); c.cabo = caboFN; c.corrente = c.va / vfn; c.prot = "10A";
+    }
+    somaFase(c); novos.push(c);
+  } m.circs = novos; }
+  const iMax = Math.max(carga.R, carga.S, carga.T) / vfn;
+  const iGeral = Math.max(cargaGeral.R, cargaGeral.S, cargaGeral.T) / vfn;
+  const geral = disjGeral(R, iGeral / fatGeral, tensao);
+  return {comando, meta, carga, iMax, geral, tensao, tri, vfn, v3f, vLinha, efic, fp, fpdc, fpl, usaTrafo, avisos};
+}
+/* linhas da tabela, com valores calculados (iguais às fórmulas do Excel) */
+function linhasDim(dim){
+  const out = []; let n = 0;
+  const row = c => {
+    if (c.tipo === "FONTE_24VDC"){
+      const nomes = c.motores.map(m => m.nome);
+      const base = nomes[0].replace(/\s*\d+$/, ""), mesma = nomes.every(x => x.replace(/\s*\d+$/, "") === base && /\d+$/.test(x));
+      const lista = nomes.length === 1 ? nomes[0] : mesma ? `${base} ${nomes.map(x => x.match(/\d+$/)[0]).join(" E ")}` : nomes.join(" E ");
+      c.rotulo = `${c.nome} - ${lista}`;
+      return {n:"", c, tipoCarga:"FONTE 24Vcc", cv:"N/A", w:c.w, wf:"N/A", va:c.va, vaf:"N/A", i:c.corrente, nf:c.fases.split("/").length};
+    }
+    n++; const nf = c.fases.split("/").length;
+    let tipoCarga = "N/A", cv = "N/A", w = c.w, wf, va = c.va, vaf, i = c.corrente;
+    if (c.tipo === "FONTE"){ wf = c.w/nf; vaf = va/nf; }
+    else if (c.tipo === "TRAFO"){ w = "N/A"; wf = "N/A"; vaf = va/nf; }
+    else if (c.tipo === "MOTOR_3F" || c.tipo === "MOTOR_2F"){ tipoCarga = "INDUTIVA "; cv = c.cv==null ? "N/A" : c.cv; wf = c.w/nf; vaf = va/nf; }
+    else if (c.tipo === "MOTOR_24VDC"){ tipoCarga = "REATIVA / INDUTIVA "; wf = c.w; vaf = va; }
+    else if (c.tipo === "RESISTIVO_3F"){ tipoCarga = "RESISTIVO"; wf = c.w/nf; vaf = va/nf; }
+    else if (c.tipo === "ILUMINACAO"){ tipoCarga = "REATIVO"; wf = c.w/nf; vaf = va/nf; }
+    else { tipoCarga = "RESISTIVA"; wf = c.w; vaf = va; }
+    return {n, c, tipoCarga, cv, w, wf, va, vaf, i, nf};
+  };
+  for (const c of dim.comando) out.push({tipo:"row", ...row(c)});
+  for (const m of dim.meta){ if (!m.circs.length) continue; out.push({tipo:"sis", titulo:m.titulo, cor:m.cor}); for (const c of m.circs) if (c.tipo !== "FONTE_24VDC") out.push({tipo:"row", ...row(c)}); }
+  return out;
+}
+
+/* =============================== QUEDA DE TENSÃO =============================== */
+function secaoDoCabo(cabo){ const m = String(cabo||"").match(/\)\s*(\d+(?:[.,]\d+)?)/); return m ? parseFloat(m[1].replace(",", ".")) : 2.5; }
+function quedaPct(c, dim, L){
+  if (!L) return null;
+  const S = secaoDoCabo(c.cabo), tri3 = c.fases === "R/S/T";
+  const k = tri3 ? 1.732 : 2;
+  const V = tri3 ? dim.vLinha : (c.fases.length === 1 ? (dim.tri ? 220 : 127) : dim.vLinha);
+  const I = tri3 ? c.va / (1.732 * dim.vLinha) : c.va / V;
+  const dv = k * L * (0.01754 / S) * I;
+  return dv / V * 100;
+}
+
+/* =============================== EXPORTAÇÃO EXCEL =============================== */
+async function gerarXlsx(dim, titulo){
+  const wb = new ExcelJS.Workbook(); const ws = wb.addWorksheet("Planilha1", {views:[{zoomScale:55, zoomScaleNormal:55, showGridLines:false}]});
+  ws.pageSetup = {orientation:"landscape", paperSize:9, fitToPage:true, fitToWidth:1, fitToHeight:0, horizontalCentered:true};
+  const fino = {style:"thin"}, borda = {top:fino,left:fino,bottom:fino,right:fino};
+  const solido = rgb => ({type:"pattern", pattern:"solid", fgColor:{argb:"FF"+rgb}});
+  const cinza = solido("D9D9D9"), verde = solido("92D050"), amarelo = solido("FFFF00");
+  const centro = {horizontal:"center", vertical:"middle", wrapText:true};
+  const fonte = (size, extra={}) => ({name:"Calibri", size, bold:true, ...extra});
+  const roxo = {argb:"FF7030A0"};
+  ws.columns = [21.14,91.71,35,32.43,30.86,20.14,32.71,21.57,17,31.57,95.43,9.71,46.71,30.86].map(w=>({width:w}));
+  const estilo = (rr, c1, c2, f) => { for (let k=c1; k<=c2; k++){ const cell = ws.getRow(rr).getCell(k); cell.border = borda; cell.alignment = centro; cell.font = f; } };
+  // título
+  ws.getCell("A1").value = titulo; ws.mergeCells("A1:N1"); estilo(1,1,14,fonte(36)); ws.getCell("A1").fill = verde; ws.getRow(1).height = 46.5;
+  const cab = ["CIRCUITO","EQUIPAMENTO","TIPO DE CARGA ","POTENCIA (CV)","POTENCIA (W)","W / FASE","POTÊNCIA (VA)","VA / FASE","FASE(S)","CORRENTE  (A)","CABOS (mm2) - ESPECIFICAR 750V OU 0,6/1kV","IDENTIFICAÇÃO E TIPO",null,"PROTEÇÃO (A)"];
+  ws.getRow(2).values = cab; ws.mergeCells("L2:M2"); ws.getRow(2).height = 69;
+  estilo(2,1,14,fonte(26)); for (let k=1;k<=14;k++) ws.getRow(2).getCell(k).fill = amarelo;
+  const porFase = {R:[],S:[],T:[]}; let r = 3;
+  const F = (f, res) => ({formula:f, result:res});
+  const protTxt = c => { const m = /^Q\d/.test(c.tag) && String(c.prot).match(/^\s*([\d.,]+)\s*-\s*([\d.,]+)\s*A?\s*$/); return m ? `${m[1]} a ${m[2]} Amp` : c.prot; };
+  const fmt = {D:"#,##0.00", E:"0.0", F:"#,##0.00", G:"0.00", H:"#,##0.00", J:"#,##0.0"};
+  for (const ln of linhasDim(dim)){
+    if (ln.tipo === "sis"){
+      ws.getCell(`A${r}`).value = ln.titulo; ws.mergeCells(`A${r}:N${r}`); estilo(r,1,14,fonte(26));
+      ws.getCell(`A${r}`).fill = solido((ln.cor || "00B0F0").replace(/^#/,"").toUpperCase()); ws.getRow(r).height = 34.5; r++; continue;
+    }
+    const {c, nf} = ln; let v;
+    const div = nf > 1 ? `/${nf}` : "";
+    if (c.tipo === "FONTE_24VDC") v = ["", c.rotulo, ln.tipoCarga, "N/A", c.w, "N/A", +c.va.toFixed(2), "N/A", c.fases, +c.corrente.toFixed(2)];
+    else if (c.tipo === "FONTE") v = [ln.n, c.nome, "N/A", "N/A", c.w, F(`E${r}${div}`, ln.wf), F(`E${r}/0.9`, ln.va), F(`G${r}${div}`, ln.vaf), c.fases, F(`G${r}/${dim.vfn}`, ln.i)];
+    else if (c.tipo === "TRAFO") v = [ln.n, c.nome, "N/A", "N/A", "N/A", "N/A", c.va, F(`G${r}${div}`, ln.vaf), c.fases, F(`G${r}/${dim.vfn}`, ln.i)];
+    else if (c.tipo === "MOTOR_3F" || c.tipo === "MOTOR_2F") v = [ln.n, c.nome, "INDUTIVA ", c.cv==null ? "N/A" : c.cv, c.cv==null ? c.w : F(`D${r}*736`, c.w), F(`E${r}/${nf}`, ln.wf), F(`(E${r}/${dim.efic})/${dim.fp}`, ln.va), F(`G${r}/${nf}`, ln.vaf), c.fases, F(`G${r}/${dim.v3f}`, ln.i)];
+    else if (c.tipo === "MOTOR_24VDC") v = [ln.n, c.nome, "REATIVA / INDUTIVA ", "N/A", c.w, F(`E${r}`, ln.wf), F(`E${r}/${dim.fpdc}`, ln.va), F(`G${r}`, ln.vaf), c.fases, F(`G${r}/${dim.vfn}`, ln.i)];
+    else if (c.tipo === "RESISTIVO_3F") v = [ln.n, c.nome, "RESISTIVO", "N/A", c.w, F(`E${r}/3`, ln.wf), F(`E${r}`, ln.va), F(`G${r}/3`, ln.vaf), c.fases, F(`G${r}/${dim.v3f}`, ln.i)];
+    else if (c.tipo === "ILUMINACAO" && c.mono) v = [ln.n, c.nome, "REATIVO", "N/A", c.w, F(`E${r}`, ln.wf), F(`(E${r}/${PF(state.R,"FP_ILUMINACAO_MONO",0.7)})`, ln.va), F(`G${r}`, ln.vaf), c.fases, F(`G${r}/${dim.vfn}`, ln.i)];
+    else if (c.tipo === "ILUMINACAO" && c.unico) v = [ln.n, c.nome, "REATIVO", "N/A", c.w, F(`E${r}/3`, ln.wf), F(`(E${r}/${dim.fpl})`, ln.va), F(`G${r}/3`, ln.vaf), c.fases, F(`E${r}/(${dim.vLinha}*1.732)`, ln.i)];
+    else if (c.tipo === "ILUMINACAO") v = [ln.n, c.nome, "REATIVO", "N/A", c.w, F(`E${r}/${nf}`, ln.wf), F(`(E${r}/${dim.fpl})`, ln.va), F(`G${r}/${nf}`, ln.vaf), c.fases, F(`G${r}/${dim.vfn}`, ln.i)];
+    else v = [ln.n, c.nome, "RESISTIVA", "N/A", c.w, F(`E${r}`, ln.wf), F(`E${r}/0.85`, ln.va), F(`G${r}`, ln.vaf), c.fases, F(`G${r}/${dim.vfn}`, ln.i)];
+    v.push(c.cabo, c.tag, c.disp, protTxt(c));
+    ws.getRow(r).values = v; ws.getRow(r).height = 24;
+    estilo(r,1,14,fonte(18));
+    for (const col in fmt) ws.getCell(`${col}${r}`).numFmt = fmt[col];
+    ws.getCell(`I${r}`).font = ws.getCell(`J${r}`).font = fonte(18, {color:roxo});
+    ws.getCell(`L${r}`).border = {top:fino,bottom:fino,left:fino}; ws.getCell(`M${r}`).border = {top:fino,bottom:fino,right:fino};
+    if (!c.semCarga) for (const f of c.fases.split("/")) porFase[f].push(r);
+    else for (let k=1;k<=14;k++) ws.getRow(r).getCell(k).font = fonte(18, {italic:true, color:{argb:"FF595959"}});
+    r++;
+  }
+  // faixa verde de fechamento
+  ws.mergeCells(`A${r}:N${r}`); ws.getCell(`A${r}`).fill = verde; ws.getCell(`A${r}`).border = borda; ws.getRow(r).height = 24;
+  const soma = (col, linhas) => {
+    if (!linhas.length) return 0;
+    const partes = []; let ini = linhas[0], ant = linhas[0];
+    for (const x of [...linhas.slice(1), null]){
+      if (x !== null && x === ant + 1){ ant = x; continue; }
+      partes.push(ini === ant ? `${col}${ini}` : `${col}${ini}:${col}${ant}`);
+      if (x !== null){ ini = ant = x; }
+    }
+    return `SUM(${partes.join(",")})`;
+  };
+  const r0 = r + 1;
+  const sumF = (fase, campo) => linhasDim(dim).filter(l => l.tipo==="row" && !l.c.semCarga && l.c.fases.includes(fase)).reduce((a,l) => a + (typeof l[campo]==="number" ? l[campo] : 0), 0);
+  const fmtTot = '#,##0';
+  ["R","S","T"].forEach((f, k) => {
+    const rr = r0 + k, ln = porFase[f];
+    const val = (col, campo) => ln.length ? F(soma(col, ln), sumF(f, campo)) : 0;
+    ws.getRow(rr).values = [null, null, k===0 ? "GERAL" : null, `CARGA FASE ${f}`, val("E","w"), val("F","wf"), val("G","va"), val("H","vaf"), f, F(`H${rr}/${dim.vfn}`, dim.carga[f]/dim.vfn)];
+    if (k === 0){ ws.getCell(`L${rr}`).value = "DSJ_0"; ws.getCell(`M${rr}`).value = "DISJUNTOR CAIXA MOLDADA"; ws.getCell(`N${rr}`).value = `${dim.geral}A`; }
+    ws.getRow(rr).height = 24; estilo(rr,3,14,fonte(18));
+    for (const col of ["E","F","G","H"]){ ws.getCell(`${col}${rr}`).numFmt = fmtTot; ws.getCell(`${col}${rr}`).fill = verde; }
+    ws.getCell(`J${rr}`).numFmt = "0.00"; ws.getCell(`J${rr}`).fill = verde;
+  });
+  const totVA = dim.carga.R + dim.carga.S + dim.carga.T;
+  const totW = ["R","S","T"].reduce((a,f)=>a+sumF(f,"wf"),0);
+  ws.getCell(`D${r0+3}`).value = "DEMANDA TOTAL (VA)"; ws.getCell(`H${r0+3}`).value = F(`SUM(H${r0}:H${r0+2})`, totVA);
+  ws.getCell(`D${r0+4}`).value = "DEMANDA TOTAL (W)"; ws.getCell(`H${r0+4}`).value = F(`SUM(F${r0}:F${r0+2})`, totW);
+  for (const rr of [r0+3, r0+4]){ ws.getRow(rr).height = 24; estilo(rr,3,8,fonte(18)); ws.mergeCells(`D${rr}:G${rr}`); ws.getCell(`H${rr}`).fill = amarelo; ws.getCell(`H${rr}`).numFmt = fmtTot; }
+  ws.mergeCells(`C${r0}:C${r0+4}`); ws.getCell(`C${r0}`).font = fonte(36);
+  for (const col of ["L","M","N"]) ws.mergeCells(`${col}${r0}:${col}${r0+2}`);
+  ws.getCell(`L${r0}`).border = {top:fino,bottom:fino,left:fino}; ws.getCell(`M${r0}`).border = {top:fino,bottom:fino,right:fino};
+  // ajusta as larguras para nenhum texto ficar cortado
+  const textoDe = cell => {
+    let v = cell.value; if (v && typeof v === "object" && "formula" in v) v = v.result;
+    if (typeof v === "number") return (Math.abs(v) >= 1000 ? v.toLocaleString("pt-BR",{maximumFractionDigits:2}) : v.toFixed(2));
+    return v == null ? "" : String(v);
+  };
+  const larg = {};
+  ws.eachRow(row => row.eachCell(cell => {
+    if (cell.isMerged) return;
+    const t = textoDe(cell); if (!t) return;
+    const tam = (cell.font && cell.font.size) || 11;
+    const cabecalho = cell.row === 2;
+    const base = cabecalho ? Math.max(...t.split(/\s+/).map(x => x.length), Math.ceil(t.length / 2)) : t.length;
+    const w = base * tam / 11 * 1.2 + 3;
+    larg[cell.col] = Math.max(larg[cell.col] || 0, w);
+  }));
+  for (const [col, w] of Object.entries(larg)){ const c = ws.getColumn(+col); c.width = Math.max(c.width || 8, Math.ceil(w)); }
+  // L2:M2 (cabeçalho mesclado) cabe em L+M
+  const lm = ws.getColumn(12).width + ws.getColumn(13).width, need = "IDENTIFICAÇÃO E TIPO".length * 26/11 * 1.2 + 3;
+  if (lm < need) ws.getColumn(13).width += Math.ceil(need - lm);
+
+  // aba EPLAN
+  const we = wb.addWorksheet("EPLAN");
+  we.columns = [5,8,28,40,7,8,9,14,8,9].map(w=>({width:w}));
+  we.addRow(["#","TAG","MACRO","EQUIPAMENTO","CV","W","In (A)","PROTEÇÃO","FASES","QUEDA %"]).eachCell(c=>{c.font={bold:true}; c.fill=cinza;});
+  const macro = {FONTE:"ENTRADA_FONTE", TRAFO:"ENTRADA_TRAFO", MOTOR_3F:"POT_MOTOR_3F_DIRETO", MOTOR_2F:"POT_MOTOR_2F_DIRETO", MOTOR_24VDC:"POT_MOTOR_24VDC_REVERSAO", FONTE_24VDC:"FONTE_24VDC", RESISTIVO_3F:"POT_AQUECEDOR_3F", ILUMINACAO:"POT_ILUMINACAO", CARGA_W:"POT_CARGA_MONO"};
+  for (const ln of linhasDim(dim)) if (ln.tipo === "row"){
+    const q = quedaPct(ln.c, dim, state.compr[ln.c.tag]);
+    we.addRow([ln.n, ln.c.tag, macro[ln.c.tipo]||ln.c.tipo, ln.c.nome, ln.c.cv==null?null:ln.c.cv, typeof ln.c.w==="number"?ln.c.w:null, +ln.i.toFixed(2), ln.c.prot, ln.c.fases, q==null?null:+q.toFixed(2)]);
+  }
+  we.addRow([]); we.addRow(["", "DSJ_0", "ENTRADA_GERAL", "DISJUNTOR GERAL", null, null, +dim.iMax.toFixed(2), `${dim.geral}A`]);
+  return await wb.xlsx.writeBuffer();
+}
+
+/* =============================== ROTEIRO EPLAN =============================== */
+function gerarRoteiro(dim, R, cliente, numero, descricao){
+  const t = dim.tensao, L = ["# Roteiro gerado pelo Dimensionador. Formato: PROP;id;valor  |  MACRO;arquivo;variante;comentario"];
+  const v = (n, max=16) => Math.max(0, Math.min(Math.round(n), max) - 1);
+  for (const [k,val] of [["CLIENTE",cliente],["NUMERO",numero],["DESCRICAO",descricao]]){
+    const id = String(P(R,`EPLAN_PROP_${k}`,"")||"").trim();
+    L.push(/^\d+$/.test(id) ? `PROP;${id};${val}` : `# PROP ${k} = ${val}  (defina EPLAN_PROP_${k} nas regras)`);
+  }
+  const m = (arq, varr=0, com="") => L.push(`MACRO;${arq}.emp;${varr};${com}`);
+  m("01_CAPA"); m("02_SIMBOLOGIA"); m(`03_DADOS_TECNICOS_${t}V`); m("04_INDICE");
+  m(`05_ENTRADA_ENERGIA_${t}V`, dim.usaTrafo?1:0, "A=sem trafo, B=com trafo");
+  const rev = s => /SOMBREAMENTO|CORTINA/.test(norm(s.titulo));
+  const fontes = dim.meta.flatMap(s=>s.circs).filter(c=>c.tipo==="FONTE_24VDC");
+  const todos = dim.meta.flatMap(s=>s.circs).filter(c=>!c.semCarga);
+  const mot = dim.meta.filter(s=>!rev(s)).flatMap(s=>s.circs).filter(c=>c.tipo==="MOTOR_3F"||c.tipo==="MOTOR_2F");
+  const motRev = dim.meta.filter(rev).flatMap(s=>s.circs).filter(c=>c.tipo==="MOTOR_3F"||c.tipo==="MOTOR_2F");
+  const grupos = (arr, n, arq) => { for (let i=0;i<arr.length;i+=n){ const g = arr.slice(i,i+n); m(arq, v(g.length), g.map(c=>`${c.tag} ${c.nome}`).join(" / ")); } };
+  grupos(mot, 3, "10_POT_MOTOR_3F"); grupos(motRev, 2, "13_POT_MOTOR_3F_REVERSAO");
+  for (const f of fontes) m("11_POT_MOTOR_24VDC", v(f.motores.length), `${f.tag} ${f.nome}: ` + f.motores.map(c=>`${c.tag} ${c.nome}`).join(" / "));
+  const aq = todos.filter(c=>c.tipo==="RESISTIVO_3F"); if (aq.length) m("14_POT_AQUECEDOR_3F", v(aq.length), aq.map(c=>`${c.tag} ${c.nome}`).join(" / "));
+  const luz = todos.filter(c=>c.tipo==="ILUMINACAO"); if (luz.length) m("12_POT_ILUMINACAO", v(luz.length), `${luz.length} circuito(s)`);
+  for (const s of dim.meta){
+    const prog = norm(s.programador), tit = norm(s.titulo);
+    const nMot = s.circs.filter(c=>c.tipo==="MOTOR_3F"||c.tipo==="MOTOR_2F").length, nDc = s.circs.filter(c=>c.tipo==="MOTOR_24VDC").length;
+    if (prog.includes("GALCON")) m("20_CONT_GALCON", v(Math.max(1,s.valvulas)), `${s.titulo} - ${s.valvulas} válvula(s)`);
+    else if (/MT5|TERMOSTATO|RT6/.test(prog)) m("21_CONT_TERMOSTATO", 0, `${s.titulo} - ${s.programador}`);
+    else if (prog.includes("TIMER")) m("22_CONT_TIMER", prog.includes("CADA") ? v(Math.max(1,nDc)) : 0, `${s.titulo} - ${s.programador}`);
+    if (/MICROASPERSAO|GOTEJO|NEBULIZACAO/.test(tit)) m("30_CMD_IRRIGACAO", v(Math.max(1,s.valvulas)), `${s.titulo} - ${s.valvulas} setor(es), boia=${s.boia?"sim":"não"}`);
+    else if (/PAD|CIRCULA/.test(tit)) m("31_CMD_VENTILACAO", v(Math.max(1,nMot)), `${s.titulo} - ${nMot} motor(es)`);
+    else if (/SOMBREAMENTO|CORTINA/.test(tit)) nDc ? m("32_CMD_SOMBREAMENTO_24VDC", v(nDc), `${s.titulo} - ${nDc} motor(es)`) : m("33_CMD_SOMBREAMENTO_3F", 0, s.titulo);
+    else if (tit.includes("ILUMINACAO")) m("34_CMD_ILUMINACAO", v(luz.length||1), s.titulo);
+    else if (tit.includes("AQUECIMENTO")) m("35_CMD_AQUECIMENTO", v(Math.max(1, s.circs.filter(c=>c.tipo==="RESISTIVO_3F").length)), s.titulo);
+  }
+  const nq = mot.length + motRev.length;
+  m("40_ALARME", v(Math.max(1,nq)), `${nq} disjuntor(es) motor no alarme`); m("41_BORNES");
+  const nc = dim.comando.length + todos.length; m("42_UNIFILAR", v(nc), `${nc} circuitos`);
+  return "﻿" + L.join("\r\n") + "\r\n";
+}
+
+/* =============================== ESTADO =============================== */
+const EXEMPLO = [
+  ["QUADRO DE COMANDO - EXEMPLO AGRÍCOLA - 000000"],
+  ["Cliente","FAZENDA EXEMPLO",null,"Cidade/UF","—"],
+  ["OBS.: Cliente confirmou energia TRIFÁSICA 220V."],[],
+  ["SISTEMA DE REFRIGERAÇÃO PAD/FAN"],["EQUIPAMENTO",null,null,"POTÊNCIA","QUANT.","ENERGIA"],
+  ["Chave boia para caixa d'água",null,null,"?",1,"?"],
+  ["Exaustor importado de 50\"",null,null,"1,5 CV",3,"TRIFASICA 220V"],
+  ["Motobomba FAMAC trifásica",null,null,"1 CV",1,"TRIFASICA 220V"],
+  ["Programador",null,null,"TERMOSTATO MT530"],[],
+  ["SISTEMA DE IRRIGAÇÃO POR MICROASPERSÃO - 04 SETORES"],["EQUIPAMENTO",null,null,"POTÊNCIA","QUANT.","ENERGIA"],
+  ["Válvula solenoide",null,null,"-",4,"-"],
+  ["Motobomba FAMAC trifásica",null,null,"2 CV",1,"TRIFASICA 220V"],
+  ["Programador",null,null,"GALCON 6 ESTAÇÕES"],[],
+  ["SISTEMA DE MOVIMENTAÇÃO"],["EQUIPAMENTO",null,null,"POTÊNCIA","QUANT.","ENERGIA"],
+  ["Motoredutor importado 140Nm",null,null,"120 W",2,"24V"],
+  ["Programador",null,null,"TIMER DIGITAL"]
+];
+const state = { R: clone(DEFAULT_RULES), ped: null, compr: {}, exemplo: true, dim: null, rulesSrc: "padrão" };
+
+function aplicarClassificacao(){ for (const s of state.ped.sistemas) for (const it of s.itens) it.ed = classificar(state.R, it); }
+function carregarPedido(rows, exemplo, nomeArq){
+  state.ped = lerPedido(rows); state.exemplo = exemplo; state.compr = {}; state.vazio = false;
+  aplicarClassificacao();
+  const t = tensaoDoPedido(state.ped);
+  $("#in-tensao").value = String(t || 220);
+  const av = $("#tensao-aviso");
+  if (!t){ av.hidden = false; av.textContent = "O pedido não informa a tensão. Confirme com o cliente e escolha 220 V ou 380 V acima (deixei 220 V)."; } else av.hidden = true;
+  $("#cli").textContent = state.ped.cliente || "—";
+  if (!exemplo){
+    const cli = String(state.ped.cliente||"").trim().split(/\s+/)[0] || "CLIENTE";
+    $("#in-nome").value = norm(cli);
+    const mNum = (nomeArq||"").match(/N\s*°?\s*(\d{4})/i); if (mNum) $("#in-num").value = mNum[1];
+  }
+  const pill = $("#src-pill");
+  pill.textContent = exemplo ? "Exemplo carregado" : (nomeArq || "Pedido carregado");
+  pill.className = "pill " + (exemplo ? "ex" : "ok");
+  render();
+}
+async function lerArquivo(file){
+  try {
+    if (typeof ExcelJS === "undefined") throw new Error("biblioteca de Excel não carregou");
+    const wb = new ExcelJS.Workbook(); await wb.xlsx.load(await file.arrayBuffer());
+    const ws = wb.worksheets[0]; const rows = [];
+    ws.eachRow({includeEmpty:true}, (row, i) => { const v = row.values; rows[i-1] = v.slice(1); });
+    for (let i=0;i<rows.length;i++) if (!rows[i]) rows[i] = [];
+    carregarPedido(rows, false, file.name);
+    toast(`Pedido lido: ${state.ped.sistemas.length} sistema(s)`);
+  } catch (e){ toast("Não consegui ler esse arquivo. Confira se é o .xlsx do pedido. (" + e.message + ")"); }
+}
+
+/* =============================== RENDER: DIMENSIONAMENTO =============================== */
+function render(){
+  const tensao = +$("#in-tensao").value;
+  state.dim = dimensionar(state.ped, state.R, tensao, $("#in-bal").checked);
+  renderItens(); renderResumo(); renderTabela();
+}
+function renderItens(){
+  const box = $("#itens"); box.innerHTML = "";
+  preencherAddSis();
+  if (!state.ped.sistemas.length){ box.innerHTML = state.vazio ? `<div class="empty">Sem cargas. Carregue um pedido ou escolha o sistema abaixo e clique em “+ Adicionar carga”.</div>` : `<div class="empty">Nenhum sistema encontrado no pedido. Confira se a planilha tem as linhas “EQUIPAMENTO / POTÊNCIA / QUANT.”.</div>`; return; }
+  state.ped.sistemas.forEach((s, si) => {
+    const info = infoSistemaPed(state.R, s);
+    const el = document.createElement("div"); el.className = "sys";
+    el.innerHTML = `<div class="sys-h"><b>${esc(s.titulo)}</b><span>${esc(info.titulo !== s.titulo ? "→ " + info.titulo : "")}${s.programador ? " · " + esc(s.programador) : ""}</span></div>`;
+    s.itens.forEach((it, ii) => {
+      const e = it.ed, row = document.createElement("div");
+      row.className = "item" + (e.tipo === "IGNORAR" ? " ign" : "");
+      const id = `${si}-${ii}`;
+      const opts = Object.entries(TIPOS).map(([k,v]) => `<option value="${k}"${k===e.tipo?" selected":""}>${v}</option>`).join("");
+      const usaCV = e.tipo === "MOTOR_3F" || e.tipo === "MOTOR_2F";
+      row.innerHTML = `<div class="d">${esc(it.desc)}<small>pedido: ${esc(it.potencia ?? "—")} · ${esc(it.qtd ?? "—")} un · ${esc(it.energia ?? "—")}</small></div>
+        <div class="ctr">
+          <select id="t-${id}" aria-label="Tipo">${opts}</select>
+          ${e.tipo==="IGNORAR" ? "" : usaCV
+            ? `<input class="num" id="cv-${id}" type="number" step="0.01" value="${e.cv ?? ""}" placeholder="${e.w ? e.w + ' W' : 'CV'}" aria-label="CV"><span class="note">CV</span>`
+            : `<input class="num" id="w-${id}" type="number" step="1" value="${e.w ?? ""}" aria-label="W"><span class="note">W</span>`}
+          ${e.tipo==="IGNORAR" ? "" : `<input class="num" id="q-${id}" type="number" min="1" step="1" value="${e.qtd}" style="width:60px" aria-label="Quantidade"><span class="note">un</span>`}
+        </div>`;
+      el.appendChild(row);
+      row.querySelector(`#t-${CSS.escape(id)}`).onchange = ev => { e.tipo = ev.target.value; e.semRegra = false;
+        if ((e.tipo==="MOTOR_3F"||e.tipo==="MOTOR_2F") && e.cv==null && e.w==null) e.cv = numBR(it.potencia);
+        if (!(e.tipo==="MOTOR_3F"||e.tipo==="MOTOR_2F") && e.w==null) e.w = numBR(it.potencia);
+        render(); };
+      const cv = row.querySelector(`#cv-${CSS.escape(id)}`); if (cv) cv.onchange = ev => { e.cv = ev.target.value === "" ? null : +ev.target.value; render(); };
+      const w = row.querySelector(`#w-${CSS.escape(id)}`); if (w) w.onchange = ev => { e.w = ev.target.value === "" ? null : +ev.target.value; render(); };
+      const q = row.querySelector(`#q-${CSS.escape(id)}`); if (q) q.onchange = ev => { e.qtd = Math.max(1, +ev.target.value || 1); render(); };
+    });
+    box.appendChild(el);
+  });
+}
+function renderResumo(){
+  const d = state.dim, nome = $("#in-nome").value || "CLIENTE", num = $("#in-num").value || "XXXX";
+  $("#titulo-dim").textContent = `${nome} N°${num} - 3F ${d.tensao}V`;
+  const todos = d.meta.flatMap(m=>m.circs).filter(c=>!c.semCarga);
+  const nQ = todos.filter(c=>c.tipo==="MOTOR_3F"||c.tipo==="MOTOR_2F").length;
+  const totVA = d.carga.R + d.carga.S + d.carga.T;
+  $("#kpis").innerHTML = `
+    <div class="kpi"><div class="lbl">Disjuntor geral</div><div class="v">${d.geral}<small> A</small></div></div>
+    <div class="kpi"><div class="lbl">Fase mais carregada</div><div class="v">${fmtN(d.iMax,1)}<small> A</small></div></div>
+    <div class="kpi"><div class="lbl">Demanda total</div><div class="v">${fmtN(totVA/1000,2)}<small> kVA</small></div></div>
+    <div class="kpi"><div class="lbl">Circuitos</div><div class="v">${d.comando.length + todos.length}<small> · ${nQ} Q${d.usaTrafo?" · trafo":""}</small></div></div>`;
+  const max = Math.max(d.carga.R, d.carga.S, d.carga.T, 1);
+  $("#phases").innerHTML = ["R","S","T"].map(f => `<div class="ph"><b style="color:var(--f${f})">${f}</b><div class="bar"><i style="width:${(d.carga[f]/max*100).toFixed(1)}%;background:var(--f${f})"></i></div><span class="n mono" style="text-align:right">${fmtN(d.carga[f]/d.vfn,1)} A</span></div>`).join("");
+  const av = [...d.avisos];
+  for (const ln of linhasDim(d)) if (ln.tipo==="row"){ const q = quedaPct(ln.c, d, state.compr[ln.c.tag]); if (q!=null && q > PF(state.R,"QUEDA_MAX_PCT",4)) av.push(`${ln.c.tag} ${ln.c.nome}: queda de ${fmtN(q,1)}% passa de ${PF(state.R,"QUEDA_MAX_PCT",4)}%. Aumente a seção do cabo.`); }
+  $("#avisos").innerHTML = av.map(a => `<div class="warnbox">${esc(a)}</div>`).join("");
+}
+function renderTabela(){
+  const d = state.dim, maxQ = PF(state.R,"QUEDA_MAX_PCT",4);
+  let h = `<thead><tr><th class="n">#</th><th>Equipamento</th><th>Tipo</th><th class="n">CV</th><th class="n">W</th><th class="n">W/fase</th><th class="n">VA</th><th class="n">VA/fase</th><th>Fases</th><th class="n">I (A)</th><th>Cabo</th><th>Tag</th><th>Dispositivo</th><th>Proteção</th><th class="n">Compr. (m)</th><th class="n">Queda</th></tr></thead><tbody>`;
+  const n2 = v => typeof v === "number" ? fmtN(v,2) : esc(v);
+  for (const ln of linhasDim(d)){
+    if (ln.tipo === "sis"){ h += `<tr class="sis"><td colspan="16">${esc(ln.titulo)}</td></tr>`; continue; }
+    const c = ln.c, L = state.compr[c.tag] || "", q = quedaPct(c, d, +L);
+    const pq = q==null ? "—" : `<span class="pill ${q>maxQ?"bad":"ok"}">${fmtN(q,2)}%</span>`;
+    h += `<tr${c.semCarga?' class="fonte24"':''}><td class="n">${ln.n}</td><td>${esc(c.rotulo || c.nome)}</td><td>${esc(ln.tipoCarga)}</td><td class="n">${typeof ln.cv==="number"?fmtBR(ln.cv):esc(ln.cv)}</td><td class="n">${n2(ln.w)}</td><td class="n">${n2(ln.wf)}</td><td class="n">${n2(ln.va)}</td><td class="n">${n2(ln.vaf)}</td><td class="mono">${c.fases}</td><td class="n">${fmtN(ln.i,2)}</td><td class="mono">${esc(c.cabo)}</td><td class="tag">${c.tag}</td><td>${esc(c.disp)}</td><td class="mono">${esc(c.prot)}</td>
+      <td class="n"><input class="num" type="number" min="0" step="1" data-tag="${c.tag}" id="L-${c.tag}" value="${L}" style="width:70px" aria-label="Comprimento de ${esc(c.tag)}"></td><td class="n">${pq}</td></tr>`;
+  }
+  const tot = f => fmtN(d.carga[f],2);
+  h += `<tr class="tot"><td></td><td colspan="5">Carga por fase (VA) · R ${tot("R")} · S ${tot("S")} · T ${tot("T")}</td><td colspan="4"></td><td></td><td class="tag">DSJ_0</td><td>DISJUNTOR CAIXA MOLDADA</td><td class="mono">${d.geral}A</td><td colspan="2"></td></tr></tbody>`;
+  $("#tbl-dim").innerHTML = h;
+  $("#tbl-dim").querySelectorAll("input[data-tag]").forEach(inp => inp.onchange = ev => { const v = +ev.target.value; if (v>0) state.compr[ev.target.dataset.tag] = v; else delete state.compr[ev.target.dataset.tag]; renderResumo(); renderTabela(); });
+}
+
+/* =============================== DOWNLOADS =============================== */
+async function salvar(filename, data){
+  const blob = data instanceof Blob ? data : new Blob([data], {type:"text/plain;charset=utf-8"});
+  const url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000); toast("Arquivo baixado.");
+}
+$("#dl-xlsx").onclick = async () => {
+  const nome = $("#in-nome").value || "CLIENTE", num = $("#in-num").value || "XXXX";
+  try { const buf = await gerarXlsx(state.dim, `${nome} N°${num} - 3F ${state.dim.tensao}V`);
+    await salvar(`DIMENSIONAMENTO ${nome} N°${num}.xlsx`, new Blob([buf])); }
+  catch (e){ toast("Erro ao gerar o Excel: " + e.message); }
+};
+$("#dl-csv").onclick = () => {
+  const nome = $("#in-nome").value || "CLIENTE", num = $("#in-num").value || "XXXX";
+  const csv = gerarRoteiro(state.dim, state.R, state.ped.cliente || nome, num, state.dim.meta.map(m=>m.titulo).join(" / "));
+  salvar(`DIMENSIONAMENTO ${nome} N°${num} - ROTEIRO_EPLAN.csv`, csv);
+};
+
+/* =============================== TEMA =============================== */
+const ICO_SOL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+const ICO_LUA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+function temaAtual(){ const t = document.documentElement.dataset.theme; if (t === "light" || t === "dark") return t; return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; }
+function pintarBotaoTema(){ const escuro = temaAtual() === "dark"; $("#btn-tema").innerHTML = (escuro ? ICO_SOL + "Modo claro" : ICO_LUA + "Modo escuro"); }
+(function(){ try { const t = localStorage.getItem("tema"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch(e){} pintarBotaoTema(); })();
+$("#btn-tema").onclick = () => { const novo = temaAtual() === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = novo; try { localStorage.setItem("tema", novo); } catch(e){} pintarBotaoTema(); };
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change", pintarBotaoTema);
+
+/* =============================== EVENTOS =============================== */
+$("#f-pedido").onchange = e => { const f = e.target.files[0]; if (f) lerArquivo(f); };
+const drop = $("#drop");
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); const f = e.dataTransfer.files[0]; if (f) lerArquivo(f); });
+$("#in-tensao").onchange = render; $("#in-bal").onchange = render; $("#in-nome").oninput = renderResumo; $("#in-num").oninput = renderResumo;
+function preencherAddSis(){
+  const sel = $("#add-sis"), atual = sel.value;
+  const titulos = [...new Set(state.R.sistemas.map(x => x.titulo).concat(["CARGAS ADICIONAIS"]))];
+  sel.innerHTML = titulos.map(t => `<option${t===atual?" selected":""}>${esc(t)}</option>`).join("");
+  if (!atual) sel.value = "CARGAS ADICIONAIS";
+}
+$("#add-carga").onclick = () => {
+  const tit = $("#add-sis").value || "CARGAS ADICIONAIS";
+  let s = state.ped.sistemas.find(x => x.titulo === tit);
+  if (!s){ s = {titulo:tit, itens:[], programador:null, manual:true}; state.ped.sistemas.push(s); }
+  const info = state.R.sistemas.find(x => x.titulo === tit) || {};
+  const nome = info.motor || "CARGA";
+  const it = {desc:"Carga manual", potencia:"1 CV", qtd:1, energia:""}; it.ed = {tipo:"MOTOR_3F", cv:1, w:null, qtd:1, nome, faixa:""};
+  s.itens.push(it); state.vazio = false; render();
+};
+$("#btn-limpar").onclick = () => {
+  state.ped = {titulo:null, cliente:null, cidade:null, obs:"", sistemas:[]}; state.exemplo = false; state.compr = {}; state.vazio = true;
+  $("#f-pedido").value = ""; $("#in-num").value = ""; $("#in-nome").value = ""; $("#cli").textContent = "—";
+  $("#tensao-aviso").hidden = true;
+  const pill = $("#src-pill"); pill.textContent = "Em branco"; pill.className = "pill";
+  render(); toast("Dados apagados. Carregue um pedido ou adicione as cargas.");
+};
+document.querySelectorAll("nav.tabs button").forEach(b => b.onclick = () => mostrar(b.dataset.view));
+function mostrar(v){
+  document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === v)));
+  ["dim","calc","reg"].forEach(k => $("#view-"+k).hidden = k !== v);
+  if (location.hash !== "#"+v) history.replaceState(null, "", "#"+v);
+}
+window.addEventListener("hashchange", () => { const h = location.hash.slice(1); if (["dim","calc","reg"].includes(h)) mostrar(h); });
+
+/* =============================== CALCULADORA =============================== */
+const V = k => ({m220:[220,1], t220:[220,1.73], t380:[380,1.73]}[k]);
+const val = id => parseFloat($(id).value.replace(",", ".")) || 0;
+const resHTML = arr => arr.map(([k,v,big]) => `<span>${k}</span><b${big?' class="big"':''}>${v}</b>`).join("");
+function calc(){
+  { const [v,k] = V($("#cm-v").value), cv = val("#cm-cv"), I = cv*736/(v*k*val("#cm-ef")*val("#cm-fp")), I2 = I*1.25;
+    const [lo,hi] = faixaQ({...state.R, params:{...state.R.params, FATOR_FAIXA_Q:1.25}}, I);
+    $("#cm-res").innerHTML = resHTML([["Corrente nominal", fmtN(I,2)+" A"],["Com fator 1,25", fmtN(I2,2)+" A"],["Faixa do disjuntor motor", `${fmtBR(lo)} – ${fmtBR(hi)} A`, true]]); }
+  { const [v,k] = V($("#cr-v").value), I = val("#cr-w")/(v*k);
+    $("#cr-res").innerHTML = resHTML([["Corrente", fmtN(I,2)+" A"],["Com fator 1,25", fmtN(I*1.25,2)+" A", true],["Disjuntor comercial", ([2,4,6,10,16,20,25,32,40,50,63].find(a=>a>=I*1.25)||"—")+" A"]]); }
+  { const [v,k] = V($("#ce-v").value), I = (val("#ce-w")/val("#ce-fp"))/(v*k);
+    $("#ce-res").innerHTML = resHTML([["Corrente", fmtN(I,2)+" A"],["Com fator 1,25", fmtN(I*1.25,2)+" A", true],["Disjuntor comercial", ([2,4,6,10,16,20,25,32,40,50,63].find(a=>a>=I*1.25)||"—")+" A"]]); }
+  { const k = +$("#cs-t").value, S = (k*(1/57)*val("#cs-l")*val("#cs-i"))/(val("#cs-v")*val("#cs-p")/100);
+    $("#cs-res").innerHTML = resHTML([["Seção mínima", fmtN(S,2)+" mm²"],["Seção comercial", (SECOES.find(x=>x>=S)||"> 150")+" mm²", true]]); }
+  { const k = +$("#cq-t").value, L = val("#cq-l"), I = val("#cq-i"), Vn = val("#cq-v"), S = +$("#cq-s").value;
+    const dv = k*L*(0.01754/S)*I, pct = Vn ? dv/Vn*100 : 0;
+    $("#cq-res").innerHTML = resHTML([["Queda de tensão", fmtN(dv,2)+" V"],["Tensão no fim da linha", fmtN(Vn-dv,2)+" V"],["Queda (%)", `<span class="pill ${pct>4?"bad":"ok"}">${fmtN(pct,2)}%</span>`, true]]); }
+  { const x = val("#cv-x"), f = {cvw:[735.499,"W"], wcv:[0.00135962,"CV"], hpw:[745.7,"W"], nmcv:[0.001341022,"CV"], vaw:[0.8,"W"], wva:[1.25,"VA"]}[$("#cv-k").value];
+    $("#cv-res").innerHTML = resHTML([["Resultado", fmtN(x*f[0], 4)+" "+f[1], true]]); }
+  calcEle();
+}
+/* eletroduto / eletrocalha */
+const CABOS = [["2,5mm",3.3],["4mm",5.83],["10mm",7.5],["16mm",8.46],["25mm",10.5],["150mm",21.53],["2x1,5mm",7.8],["2x2,5mm",8.8],["2x4mm",11.2],["3x1,5mm",8.4],["3x2,5mm",9.7],["3x4mm",12.1],["4x1,5mm",9.5],["4x2,5mm",10.6],["4x4mm",13.5],["4x6mm",15.1],["4x10mm",16],["4x16mm",20]];
+const ELETRODUTOS = [["3/4\"",20],["1\"",26],["1.1/4\"",30.3],["1.1/2\"",40.7],["2\"",52.3],["3\"",75],["4\"",83]];
+const CALHAS = [["38x38",38*38],["50x50",2500],["50x75",3750],["50x100",5000],["75x75",5625],["75x100",7500],["100x100",10000]];
+const eleQtd = {"2,5mm":0};
+function montarEle(){
+  $("#ele-tbl").innerHTML = `<thead><tr><th>Cabo</th><th class="n">Ø ext. (mm)</th><th class="n">Qtd</th><th class="n">Área (mm²)</th></tr></thead><tbody>` +
+    CABOS.map(([b,d],i) => `<tr><td class="mono">${b}</td><td class="n">${fmtN(d,2)}</td><td class="n"><input class="num" type="number" min="0" step="1" id="el-${i}" value="${b==="2,5mm"?12:0}" style="width:64px" aria-label="Quantidade de ${b}"></td><td class="n" id="ela-${i}">—</td></tr>`).join("") + `</tbody>`;
+  CABOS.forEach((_,i) => $("#el-"+i).oninput = calcEle);
+}
+function calcEle(){
+  let area = 0, n = 0;
+  CABOS.forEach(([b,d],i) => { const q = +$("#el-"+i).value || 0, a = Math.PI*d*d/4*q; n += q; area += a; $("#ela-"+i).textContent = q ? fmtN(a,1) : "—"; });
+  const occ = n <= 1 ? 0.53 : n === 2 ? 0.31 : 0.40;
+  const dut = ELETRODUTOS.find(([,di]) => Math.PI*di*di/4*occ >= area);
+  const cal = CALHAS.find(([,a]) => a*0.30 >= area);
+  $("#ele-res").innerHTML = resHTML([["Cabos / área total", `${n} · ${fmtN(area,1)} mm²`],[`Eletroduto (ocupação ${Math.round(occ*100)}%)`, dut ? dut[0] : "maior que 4\"", true],["Eletrocalha (ocupação 30%)", cal ? cal[0] : "100x150 ou maior", true]]);
+}
+$("#cq-s").innerHTML = SECOES.map(s => `<option value="${s}"${s===2.5?" selected":""}>${fmtBR(s)}</option>`).join("");
+document.querySelectorAll("#view-calc input, #view-calc select").forEach(el => el.addEventListener("input", calc));
+
+/* =============================== REGRAS (UI) =============================== */
+function renderRegras(){
+  const R = state.R;
+  const keys = Object.keys(DEFAULT_RULES.params).concat(["EPLAN_PROP_CLIENTE","EPLAN_PROP_NUMERO","EPLAN_PROP_DESCRICAO"].filter(k => !(k in DEFAULT_RULES.params)));
+  $("#reg-par").innerHTML = `<thead><tr><th>Parâmetro</th><th>Valor</th><th>Para que serve</th></tr></thead><tbody>` +
+    keys.map(k => `<tr><td class="mono">${k}</td><td><input class="w-txt" id="rp-${k}" data-k="${k}" value="${esc(R.params[k] ?? "")}"></td><td class="desc note">${esc(DEFAULT_RULES.paramInfo[k] || (k.startsWith("EPLAN_PROP") ? "ID da propriedade do projeto no EPLAN (carimbo)" : ""))}</td></tr>`).join("") + `</tbody>`;
+  $("#reg-par").querySelectorAll("input").forEach(inp => inp.onchange = e => { const k = e.target.dataset.k, v = e.target.value; R.params[k] = (v !== "" && !isNaN(+v.replace(",", ".")) && !/[A-Z(]/i.test(v)) ? +v.replace(",", ".") : v; refazer(); });
+  const tipoSel = (v, id) => `<select id="${id}">${Object.keys(TIPOS).map(k=>`<option value="${k}"${k===norm(v)?" selected":""}>${k}</option>`).join("")}</select>`;
+  $("#reg-cat").innerHTML = `<thead><tr><th>Descrição contém</th><th>Tipo</th><th>CV real</th><th>W real</th><th>Nome no dimensionamento</th><th>Faixa Q fixa</th><th>Acompanha (nome:CV)</th><th>Observação</th><th></th></tr></thead><tbody>` +
+    R.catalogo.map((c,i) => `<tr><td><input class="w-txt" id="cc-${i}" value="${esc(c.contem)}"></td><td>${tipoSel(c.tipo,"ct-"+i)}</td><td><input class="num" id="ccv-${i}" value="${esc(c.cv)}"></td><td><input class="num" id="cw-${i}" value="${esc(c.w)}"></td><td><input class="w-txt" id="cn-${i}" value="${esc(c.nome)}"></td><td><input class="num" id="cf-${i}" value="${esc(c.faixa)}" style="width:96px"></td><td><input class="w-txt" id="ca-${i}" value="${esc(c.acompanha||"")}" style="min-width:120px"></td><td><input class="w-txt" id="co-${i}" value="${esc(c.obs)}"></td><td><button class="btn ghost" id="cx-${i}" aria-label="Remover linha">×</button></td></tr>`).join("") + `</tbody>`;
+  R.catalogo.forEach((c,i) => {
+    const bind = (id, k, num) => $(id).onchange = e => { const v = e.target.value; c[k] = num ? (v==="" ? "" : +v.replace(",", ".")) : v; refazer(true); };
+    bind("#cc-"+i,"contem"); bind("#ct-"+i,"tipo"); bind("#ccv-"+i,"cv",true); bind("#cw-"+i,"w",true); bind("#cn-"+i,"nome"); bind("#cf-"+i,"faixa"); bind("#ca-"+i,"acompanha"); bind("#co-"+i,"obs");
+    $("#cx-"+i).onclick = () => { R.catalogo.splice(i,1); renderRegras(); refazer(true); };
+  });
+  $("#reg-sis").innerHTML = `<thead><tr><th>Título do pedido contém</th><th>Título no dimensionamento</th><th>Ordem</th><th>Nome do motor</th><th>Nome da bomba</th><th></th></tr></thead><tbody>` +
+    R.sistemas.map((s,i) => `<tr><td><input class="w-txt" id="sc-${i}" value="${esc(s.contem)}"></td><td><input class="w-txt" id="st-${i}" value="${esc(s.titulo)}" style="min-width:260px"></td><td><input class="num" id="so-${i}" value="${esc(s.ordem)}" style="width:56px"></td><td><input class="w-txt" id="sm-${i}" value="${esc(s.motor)}"></td><td><input class="w-txt" id="sb-${i}" value="${esc(s.bomba)}"></td><td><button class="btn ghost" id="sx-${i}" aria-label="Remover linha">×</button></td></tr>`).join("") + `</tbody>`;
+  R.sistemas.forEach((s,i) => {
+    const bind = (id, k, num) => $(id).onchange = e => { s[k] = num ? +e.target.value : e.target.value; refazer(); };
+    bind("#sc-"+i,"contem"); bind("#st-"+i,"titulo"); bind("#so-"+i,"ordem",true); bind("#sm-"+i,"motor"); bind("#sb-"+i,"bomba");
+    $("#sx-"+i).onclick = () => { R.sistemas.splice(i,1); renderRegras(); refazer(); };
+  });
+  $("#reg-fq").value = R.faixasQ.map(([a,b]) => `${fmtBR(a)}-${fmtBR(b)}`).join("; ");
+  $("#reg-dg").value = R.geral.join("; ");
+  $("#reg-src").textContent = state.rulesSrc === "db" ? (sb ? "Regras da empresa (salvas no banco, valem para todos)." : "Regras da empresa (arquivo regras.json do site).") : state.rulesSrc === "editado" ? "Regras editadas só neste navegador. Clique em “Salvar para todos” para gravar para a empresa." : "Regras padrão (deduzidas de 14 projetos + calculadora).";
+}
+$("#reg-fq").onchange = e => { const fx = e.target.value.split(";").map(p => p.split("-").map(x => parseFloat(x.trim().replace(",", ".")))).filter(p => p.length===2 && !isNaN(p[0]) && !isNaN(p[1])); if (fx.length){ state.R.faixasQ = fx.sort((a,b)=>a[0]-b[0]); refazer(); } };
+$("#reg-dg").onchange = e => { const g = e.target.value.split(/[;,]/).map(x=>parseInt(x)).filter(x=>!isNaN(x)); if (g.length){ state.R.geral = g.sort((a,b)=>a-b); refazer(); } };
+$("#cat-add").onclick = () => { state.R.catalogo.unshift({contem:"", tipo:"MOTOR_3F", cv:"", w:"", nome:"", faixa:"", obs:""}); renderRegras(); };
+$("#sis-add").onclick = () => { state.R.sistemas.push({contem:"", titulo:"", ordem:50, motor:"", bomba:""}); renderRegras(); };
+$("#reg-reset").onclick = () => { state.R = clone(DEFAULT_RULES); state.rulesSrc = "editado"; renderRegras(); refazer(true); toast("Regras padrão restauradas. Clique em “Salvar para todos” para valer para a empresa."); };
+function refazer(reclass){ if (state.rulesSrc !== "editado"){ state.rulesSrc = "editado"; $("#reg-src").textContent = "Regras editadas só neste navegador. Clique em “Salvar para todos” para gravar para a empresa."; } if (reclass) aplicarClassificacao(); render(); calc(); }
+
+/* regras da empresa: Supabase (tabela "regras", linha id=1). Sem Supabase configurado: arquivo regras.json */
+const CFG = window.DIM_CONFIG || {};
+const sb = (CFG.supabaseUrl && CFG.supabaseAnonKey && window.supabase) ? window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseAnonKey) : null;
+function aplicarRegrasSalvas(r){
+  state.R = {...clone(DEFAULT_RULES), ...r, params:{...DEFAULT_RULES.params, ...r.params}, paramInfo:DEFAULT_RULES.paramInfo};
+  state.rulesSrc = "db"; aplicarClassificacao(); renderRegras(); render(); calc();
+}
+function mostrarUsuario(){ if (!sb) $("#reg-save").textContent = "Baixar regras.json"; }
+async function gravarRegras(){
+  const body = clone(state.R); delete body.paramInfo;
+  const { error } = await sb.from("regras").upsert({id:1, regras:body, salvo_em:new Date().toISOString()});
+  if (error) throw error;
+  state.rulesSrc = "db"; renderRegras(); toast("Regras salvas para todos.");
+}
+$("#reg-save").onclick = async () => {
+  if (!sb){ const body = clone(state.R); delete body.paramInfo; salvar("regras.json", JSON.stringify(body, null, 2) + "\n"); toast("regras.json baixado. Substitua o arquivo no site para valer para todos."); return; }
+  try { await gravarRegras(); } catch (e){ toast("Não foi possível salvar: " + (e.message || e)); }
+};
+/* =============================== INÍCIO =============================== */
+montarEle(); calc(); carregarPedido(EXEMPLO, true); renderRegras();
+{ const h = location.hash.slice(1); if (["dim","calc","reg"].includes(h)) mostrar(h); }
+(async () => {
+  mostrarUsuario();
+  try {
+    if (sb){
+      const { data, error } = await sb.from("regras").select("regras").eq("id", 1).maybeSingle();
+      if (!error && data && data.regras && state.rulesSrc !== "editado"){ aplicarRegrasSalvas(data.regras); return; }
+    }
+    const resp = await fetch("regras.json", {cache:"no-store"}); if (!resp.ok) return;
+    const r = await resp.json(); if (state.rulesSrc !== "editado") aplicarRegrasSalvas(r);
+  } catch (e){}
+})();
+</script>
+</body>
+</html>

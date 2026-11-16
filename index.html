@@ -302,7 +302,7 @@ const DEFAULT_RULES = {
     FATOR_PROTECAO_24VDC: 2, MOTORES_24VDC_POR_FONTE: 2, W_MAX_2_MOTORES_POR_FONTE: 140, PROTECAO_24VDC_MINIMA: 4, FATOR_PROTECAO_FONTE_24VDC: 2,
     ILUMINACAO_W_MAX_POR_CIRCUITO: 0, PROTECAO_ILUMINACAO: "16A",
     PROGRAMADORES_COM_TRAFO: "GALCON",
-    CABO_MOTOR_3F: "(FFF+T) 2,5 / 750 / 70°", CABO_BIFASICO: "(FF) 2,5 / 750 / 70°", CABO_MONOFASICO: "(F+N) 2,5 / 750 / 70°",
+    CABO_MOTOR_3F: "(FFF+T) 2,5 / 750 / 70°", CABO_BIFASICO: "(FF) 2,5 / 750 / 70°", CABO_MOTOR_1F: "(F+N+T) 2,5 / 750 / 70°", CABO_MONOFASICO: "(F+N) 2,5 / 750 / 70°",
     QUEDA_MAX_PCT: 4,
     FP_ILUMINACAO_MONO: 0.7, PROTECAO_ILUMINACAO_MONO: "10A",
     FATOR_PROTECAO_RESISTIVO: 1,
@@ -353,7 +353,7 @@ const DEFAULT_RULES = {
   faixasQ: [[0.1,0.16],[0.16,0.25],[0.25,0.4],[0.4,0.63],[0.63,1],[1,1.6],[1.6,2.5],[2.5,4],[4,6.3],[6.3,10],[10,16],[16,20],[20,25],[25,32]],
   geral: [16,20,25,32,40,50,63,80,100,125,160,200,250]
 };
-const TIPOS = {IGNORAR:"Não entra", MOTOR_3F:"Motor trifásico", MOTOR_2F:"Motor bifásico", MOTOR_24VDC:"Motor 24Vcc importado", RESISTIVO_3F:"Aquecedor (resistivo 3F)", ILUMINACAO:"Iluminação", CARGA_W:"Carga monofásica"};
+const TIPOS = {IGNORAR:"Não entra", MOTOR_3F:"Motor trifásico", MOTOR_1F:"Motor monofásico", MOTOR_2F:"Motor bifásico", MOTOR_24VDC:"Motor 24Vcc importado", RESISTIVO_3F:"Aquecedor (resistivo 3F)", ILUMINACAO:"Iluminação", CARGA_W:"Carga monofásica"};
 const SECOES = [1.5,2.5,4,6,10,16,25,35,50,70,95,120,150];
 
 /* =============================== UTILIDADES =============================== */
@@ -463,12 +463,12 @@ function classificar(R, item){
     if (norm(cat.tipo) === "IGNORAR") return {tipo:"IGNORAR", cv:null, w:null, qtd, nome:"", faixa:""};
     let cv = cat.cv===""||cat.cv==null ? null : +cat.cv, w = cat.w===""||cat.w==null ? null : +cat.w;
     const tipo = norm(cat.tipo);
-    if (cv==null && w==null){ if (tipo==="MOTOR_3F"||tipo==="MOTOR_2F") cv = v; else w = v; }
+    if (cv==null && w==null){ if (/^MOTOR_[123]F$/.test(tipo)) cv = v; else w = v; }
     return {tipo, cv, w, qtd, nome:cat.nome||"", faixa:cat.faixa||"", acompanha:cat.acompanha||""};
   }
   if (v==null) return {tipo:"IGNORAR", cv:null, w:null, qtd, nome:"", faixa:""};
   if (/(^|[^0-9])24\s*V/.test(norm(item.energia)) && pot.includes("W")) return {tipo:"MOTOR_24VDC", cv:null, w:v, qtd, nome:"", faixa:""};
-  if (pot.includes("CV")) return {tipo:"MOTOR_3F", cv:v, w:null, qtd, nome:"", faixa:""};
+  if (pot.includes("CV")){ const en = norm(item.energia); return {tipo: en.includes("MONO") ? "MOTOR_1F" : en.includes("BIF") ? "MOTOR_2F" : "MOTOR_3F", cv:v, w:null, qtd, nome:"", faixa:""}; }
   if (pot.includes("W")) return {tipo:"CARGA_W", cv:null, w:v, qtd, nome:"", faixa:"", semRegra:true};
   return {tipo:"IGNORAR", cv:null, w:null, qtd, nome:"", faixa:""};
 }
@@ -547,10 +547,11 @@ function dimensionar(ped, R, tensao, balancear){
   const faseMono = padrao => balancear ? menor(["R","S","T"]) : padrao;
   const faseBi = padrao => balancear ? menor(["R/S","S/T","R/T"]) : padrao;
   for (const m of meta){ const novos = []; for (const c of m.circs){
-    if (c.tipo === "MOTOR_3F" || c.tipo === "MOTOR_2F"){
+    if (/^MOTOR_[123]F$/.test(c.tipo) || c.tipo === "MOTOR_1F"){
       if (c.cv != null) c.w = c.cv * 736;
       c.va = c.w / efic / fp; nq++; c.tag = `Q${nq}`; c.disp = "DISJUNTOR MOTOR";
-      c.fases = c.tipo === "MOTOR_3F" ? "R/S/T" : faseBi("R/S"); c.cabo = cabo3f; c.corrente = c.va / v3f;
+      if (c.tipo === "MOTOR_1F"){ c.fases = faseMono("R"); c.cabo = P(R,"CABO_MOTOR_1F","(F+N+T) 2,5 / 750 / 70°"); c.corrente = c.va / vfn; }
+      else { c.fases = c.tipo === "MOTOR_3F" ? "R/S/T" : faseBi("R/S"); c.cabo = cabo3f; c.corrente = c.va / v3f; }
       let lo, hi;
       if (c.faixaCat){ const n = String(c.faixaCat).match(/\d+(?:[.,]\d+)?/g)||[]; lo = parseFloat((n[0]||"0").replace(",", ".")); hi = parseFloat((n[1]||"0").replace(",", ".")); }
       else [lo,hi] = faixaQ(R, c.corrente);
@@ -621,7 +622,7 @@ function linhasDim(dim){
     let tipoCarga = "N/A", cv = "N/A", w = c.w, wf, va = c.va, vaf, i = c.corrente;
     if (c.tipo === "FONTE"){ wf = c.w/nf; vaf = va/nf; }
     else if (c.tipo === "TRAFO"){ w = "N/A"; wf = "N/A"; vaf = va/nf; }
-    else if (c.tipo === "MOTOR_3F" || c.tipo === "MOTOR_2F"){ tipoCarga = "INDUTIVA "; cv = c.cv==null ? "N/A" : c.cv; wf = c.w/nf; vaf = va/nf; }
+    else if (/^MOTOR_[123]F$/.test(c.tipo)){ tipoCarga = "INDUTIVA "; cv = c.cv==null ? "N/A" : c.cv; wf = c.w/nf; vaf = va/nf; }
     else if (c.tipo === "MOTOR_24VDC"){ tipoCarga = "REATIVA / INDUTIVA "; wf = c.w; vaf = va; }
     else if (c.tipo === "RESISTIVO_3F"){ tipoCarga = "RESISTIVO"; wf = c.w/nf; vaf = va/nf; }
     else if (c.tipo === "ILUMINACAO"){ tipoCarga = "REATIVO"; wf = c.w/nf; vaf = va/nf; }
@@ -676,7 +677,7 @@ async function gerarXlsx(dim, titulo){
     if (c.tipo === "FONTE_24VDC") v = ["", c.rotulo, ln.tipoCarga, "N/A", c.w, "N/A", +c.va.toFixed(2), "N/A", c.fases, +c.corrente.toFixed(2)];
     else if (c.tipo === "FONTE") v = [ln.n, c.nome, "N/A", "N/A", c.w, F(`E${r}${div}`, ln.wf), F(`E${r}/0.9`, ln.va), F(`G${r}${div}`, ln.vaf), c.fases, F(`G${r}/${dim.vfn}`, ln.i)];
     else if (c.tipo === "TRAFO") v = [ln.n, c.nome, "N/A", "N/A", "N/A", "N/A", c.va, F(`G${r}${div}`, ln.vaf), c.fases, F(`G${r}/${dim.vfn}`, ln.i)];
-    else if (c.tipo === "MOTOR_3F" || c.tipo === "MOTOR_2F") v = [ln.n, c.nome, "INDUTIVA ", c.cv==null ? "N/A" : c.cv, c.cv==null ? c.w : F(`D${r}*736`, c.w), F(`E${r}/${nf}`, ln.wf), F(`(E${r}/${dim.efic})/${dim.fp}`, ln.va), F(`G${r}/${nf}`, ln.vaf), c.fases, F(`G${r}/${dim.v3f}`, ln.i)];
+    else if (/^MOTOR_[123]F$/.test(c.tipo)) v = [ln.n, c.nome, "INDUTIVA ", c.cv==null ? "N/A" : c.cv, c.cv==null ? c.w : F(`D${r}*736`, c.w), F(`E${r}/${nf}`, ln.wf), F(`(E${r}/${dim.efic})/${dim.fp}`, ln.va), F(`G${r}/${nf}`, ln.vaf), c.fases, F(`G${r}/${c.tipo === "MOTOR_1F" ? dim.vfn : dim.v3f}`, ln.i)];
     else if (c.tipo === "MOTOR_24VDC") v = [ln.n, c.nome, "REATIVA / INDUTIVA ", "N/A", c.w, F(`E${r}`, ln.wf), F(`E${r}/${dim.fpdc}`, ln.va), F(`G${r}`, ln.vaf), c.fases, F(`G${r}/${dim.vfn}`, ln.i)];
     else if (c.tipo === "RESISTIVO_3F") v = [ln.n, c.nome, "RESISTIVO", "N/A", c.w, F(`E${r}/3`, ln.wf), F(`E${r}`, ln.va), F(`G${r}/3`, ln.vaf), c.fases, F(`G${r}/${dim.v3f}`, ln.i)];
     else if (c.tipo === "ILUMINACAO" && c.mono) v = [ln.n, c.nome, "REATIVO", "N/A", c.w, F(`E${r}`, ln.wf), F(`(E${r}/${PF(state.R,"FP_ILUMINACAO_MONO",0.7)})`, ln.va), F(`G${r}`, ln.vaf), c.fases, F(`G${r}/${dim.vfn}`, ln.i)];
@@ -750,7 +751,7 @@ async function gerarXlsx(dim, titulo){
   const we = wb.addWorksheet("EPLAN");
   we.columns = [5,8,28,40,7,8,9,14,8,9].map(w=>({width:w}));
   we.addRow(["#","TAG","MACRO","EQUIPAMENTO","CV","W","In (A)","PROTEÇÃO","FASES","QUEDA %"]).eachCell(c=>{c.font={bold:true}; c.fill=cinza;});
-  const macro = {FONTE:"ENTRADA_FONTE", TRAFO:"ENTRADA_TRAFO", MOTOR_3F:"POT_MOTOR_3F_DIRETO", MOTOR_2F:"POT_MOTOR_2F_DIRETO", MOTOR_24VDC:"POT_MOTOR_24VDC_REVERSAO", FONTE_24VDC:"FONTE_24VDC", RESISTIVO_3F:"POT_AQUECEDOR_3F", ILUMINACAO:"POT_ILUMINACAO", CARGA_W:"POT_CARGA_MONO"};
+  const macro = {FONTE:"ENTRADA_FONTE", TRAFO:"ENTRADA_TRAFO", MOTOR_3F:"POT_MOTOR_3F_DIRETO", MOTOR_1F:"POT_MOTOR_1F_DIRETO", MOTOR_2F:"POT_MOTOR_2F_DIRETO", MOTOR_24VDC:"POT_MOTOR_24VDC_REVERSAO", FONTE_24VDC:"FONTE_24VDC", RESISTIVO_3F:"POT_AQUECEDOR_3F", ILUMINACAO:"POT_ILUMINACAO", CARGA_W:"POT_CARGA_MONO"};
   for (const ln of linhasDim(dim)) if (ln.tipo === "row"){
     const q = quedaPct(ln.c, dim, state.compr[ln.c.tag]);
     we.addRow([ln.n, ln.c.tag, macro[ln.c.tipo]||ln.c.tipo, ln.c.nome, ln.c.cv==null?null:ln.c.cv, typeof ln.c.w==="number"?ln.c.w:null, +ln.i.toFixed(2), ln.c.prot, ln.c.fases, q==null?null:+q.toFixed(2)]);
@@ -773,8 +774,8 @@ function gerarRoteiro(dim, R, cliente, numero, descricao){
   const rev = s => /SOMBREAMENTO|CORTINA/.test(norm(s.titulo));
   const fontes = dim.meta.flatMap(s=>s.circs).filter(c=>c.tipo==="FONTE_24VDC");
   const todos = dim.meta.flatMap(s=>s.circs).filter(c=>!c.semCarga);
-  const mot = dim.meta.filter(s=>!rev(s)).flatMap(s=>s.circs).filter(c=>c.tipo==="MOTOR_3F"||c.tipo==="MOTOR_2F");
-  const motRev = dim.meta.filter(rev).flatMap(s=>s.circs).filter(c=>c.tipo==="MOTOR_3F"||c.tipo==="MOTOR_2F");
+  const mot = dim.meta.filter(s=>!rev(s)).flatMap(s=>s.circs).filter(c=>/^MOTOR_[123]F$/.test(c.tipo));
+  const motRev = dim.meta.filter(rev).flatMap(s=>s.circs).filter(c=>/^MOTOR_[123]F$/.test(c.tipo));
   const grupos = (arr, n, arq) => { for (let i=0;i<arr.length;i+=n){ const g = arr.slice(i,i+n); m(arq, v(g.length), g.map(c=>`${c.tag} ${c.nome}`).join(" / ")); } };
   grupos(mot, 3, "10_POT_MOTOR_3F"); grupos(motRev, 2, "13_POT_MOTOR_3F_REVERSAO");
   for (const f of fontes) m("11_POT_MOTOR_24VDC", v(f.motores.length), `${f.tag} ${f.nome}: ` + f.motores.map(c=>`${c.tag} ${c.nome}`).join(" / "));
@@ -782,7 +783,7 @@ function gerarRoteiro(dim, R, cliente, numero, descricao){
   const luz = todos.filter(c=>c.tipo==="ILUMINACAO"); if (luz.length) m("12_POT_ILUMINACAO", v(luz.length), `${luz.length} circuito(s)`);
   for (const s of dim.meta){
     const prog = norm(s.programador), tit = norm(s.titulo);
-    const nMot = s.circs.filter(c=>c.tipo==="MOTOR_3F"||c.tipo==="MOTOR_2F").length, nDc = s.circs.filter(c=>c.tipo==="MOTOR_24VDC").length;
+    const nMot = s.circs.filter(c=>/^MOTOR_[123]F$/.test(c.tipo)).length, nDc = s.circs.filter(c=>c.tipo==="MOTOR_24VDC").length;
     if (prog.includes("GALCON")) m("20_CONT_GALCON", v(Math.max(1,s.valvulas)), `${s.titulo} - ${s.valvulas} válvula(s)`);
     else if (/MT5|TERMOSTATO|RT6/.test(prog)) m("21_CONT_TERMOSTATO", 0, `${s.titulo} - ${s.programador}`);
     else if (prog.includes("TIMER")) m("22_CONT_TIMER", prog.includes("CADA") ? v(Math.max(1,nDc)) : 0, `${s.titulo} - ${s.programador}`);
@@ -868,7 +869,7 @@ function renderItens(){
       row.className = "item" + (e.tipo === "IGNORAR" ? " ign" : "");
       const id = `${si}-${ii}`;
       const opts = Object.entries(TIPOS).map(([k,v]) => `<option value="${k}"${k===e.tipo?" selected":""}>${v}</option>`).join("");
-      const usaCV = e.tipo === "MOTOR_3F" || e.tipo === "MOTOR_2F";
+      const usaCV = /^MOTOR_[123]F$/.test(e.tipo);
       row.innerHTML = `<div class="d">${esc(it.desc)}<small>pedido: ${esc(it.potencia ?? "—")} · ${esc(it.qtd ?? "—")} un · ${esc(it.energia ?? "—")}</small></div>
         <div class="ctr">
           <select id="t-${id}" aria-label="Tipo">${opts}</select>
@@ -879,8 +880,8 @@ function renderItens(){
         </div>`;
       el.appendChild(row);
       row.querySelector(`#t-${CSS.escape(id)}`).onchange = ev => { e.tipo = ev.target.value; e.semRegra = false;
-        if ((e.tipo==="MOTOR_3F"||e.tipo==="MOTOR_2F") && e.cv==null && e.w==null) e.cv = numBR(it.potencia);
-        if (!(e.tipo==="MOTOR_3F"||e.tipo==="MOTOR_2F") && e.w==null) e.w = numBR(it.potencia);
+        if ((/^MOTOR_[123]F$/.test(e.tipo)) && e.cv==null && e.w==null) e.cv = numBR(it.potencia);
+        if (!(/^MOTOR_[123]F$/.test(e.tipo)) && e.w==null) e.w = numBR(it.potencia);
         render(); };
       const cv = row.querySelector(`#cv-${CSS.escape(id)}`); if (cv) cv.onchange = ev => { e.cv = ev.target.value === "" ? null : +ev.target.value; render(); };
       const w = row.querySelector(`#w-${CSS.escape(id)}`); if (w) w.onchange = ev => { e.w = ev.target.value === "" ? null : +ev.target.value; render(); };
@@ -893,7 +894,7 @@ function renderResumo(){
   const d = state.dim, nome = $("#in-nome").value || "CLIENTE", num = $("#in-num").value || "XXXX";
   $("#titulo-dim").textContent = `${nome} N°${num} - 3F ${d.tensao}V`;
   const todos = d.meta.flatMap(m=>m.circs).filter(c=>!c.semCarga);
-  const nQ = todos.filter(c=>c.tipo==="MOTOR_3F"||c.tipo==="MOTOR_2F").length;
+  const nQ = todos.filter(c=>/^MOTOR_[123]F$/.test(c.tipo)).length;
   const totVA = d.carga.R + d.carga.S + d.carga.T;
   $("#kpis").innerHTML = `
     <div class="kpi"><div class="lbl">Disjuntor geral</div><div class="v">${d.geral}<small> A</small></div></div>

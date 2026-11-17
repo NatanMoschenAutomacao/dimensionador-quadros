@@ -14,7 +14,7 @@
 :root{
   --bg:#F1F2EF; --surface:#FFFFFF; --surface-2:#F7F8F5; --line:#D9DCD4; --line-strong:#B9BDB2;
   --ink:#1D2125; --ink-2:#4B525A; --ink-3:#737B83;
-  --accent:#C9580F; --accent-ink:#FFFFFF; --accent-soft:#FBE8DA; --xl-tag:#C5E0B4; --xl-tag-ink:#1E3A10; --xl-title:#FFC000; --xl-title-ink:#2A2000; --xl-head:#FFE699; --xl-head-ink:#2A2000;
+  --accent:#C9580F; --accent-ink:#FFFFFF; --accent-soft:#FBE8DA;
   --ok:#2F7D4A; --ok-soft:#E1F1E6; --warn:#A86A00; --warn-soft:#FBF0D6; --bad:#B3261E; --bad-soft:#F9E0DE;
   --fR:#B8322A; --fS:#2B2F33; --fT:#7A7F86;
   --f-sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -24,13 +24,13 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#14171A; --surface:#1C2024; --surface-2:#22272C; --line:#30363C; --line-strong:#454C53;
   --ink:#E8EAEC; --ink-2:#B4BAC0; --ink-3:#8A9198;
-  --accent:#F08A3C; --accent-ink:#1A0E05; --accent-soft:#3A2414; --xl-tag:#2E4A22; --xl-tag-ink:#D6EDC8; --xl-title:#6B5200; --xl-title-ink:#FFF3CC; --xl-head:#4A3D10; --xl-head-ink:#FFF0C2;
+  --accent:#F08A3C; --accent-ink:#1A0E05; --accent-soft:#3A2414;
   --ok:#6CC38A; --ok-soft:#183324; --warn:#E3B04B; --warn-soft:#3A2E12; --bad:#F2867E; --bad-soft:#3D1A18;
   --fR:#F0776E; --fS:#D5D9DD; --fT:#8E959C; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#14171A; --surface:#1C2024; --surface-2:#22272C; --line:#30363C; --line-strong:#454C53;
   --ink:#E8EAEC; --ink-2:#B4BAC0; --ink-3:#8A9198;
-  --accent:#F08A3C; --accent-ink:#1A0E05; --accent-soft:#3A2414; --xl-tag:#2E4A22; --xl-tag-ink:#D6EDC8; --xl-title:#6B5200; --xl-title-ink:#FFF3CC; --xl-head:#4A3D10; --xl-head-ink:#FFF0C2;
+  --accent:#F08A3C; --accent-ink:#1A0E05; --accent-soft:#3A2414;
   --ok:#6CC38A; --ok-soft:#183324; --warn:#E3B04B; --warn-soft:#3A2E12; --bad:#F2867E; --bad-soft:#3D1A18;
   --fR:#F0776E; --fS:#D5D9DD; --fT:#8E959C; color-scheme:dark}
 *{box-sizing:border-box}
@@ -112,9 +112,9 @@ td.desc{white-space:normal;min-width:180px}
 .subtabs button{font:inherit;font-size:13px;background:none;border:1px solid transparent;border-bottom:none;border-radius:4px 4px 0 0;padding:7px 12px;color:var(--ink-2);cursor:pointer;margin-bottom:-1px}
 .subtabs button[aria-selected="true"]{background:var(--surface);border-color:var(--line);color:var(--ink);font-weight:600}
 .sub{display:flex;flex-direction:column;gap:18px}
-.xl-tag{display:inline-block;align-self:flex-start;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 10px;border-radius:3px;background:var(--xl-tag);color:var(--xl-tag-ink)}
-.xl-title{font-size:15px;background:var(--xl-title);color:var(--xl-title-ink);padding:6px 10px;border-radius:3px;margin:0}
-.xl-tbl th{background:var(--xl-head);color:var(--xl-head-ink);white-space:normal}
+.xl-tag{display:inline-block;align-self:flex-start;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 10px;border-radius:3px;background:var(--accent-soft);color:var(--accent)}
+.xl-title{font-size:15px;color:var(--ink);padding:2px 0 6px 10px;border-left:3px solid var(--accent);border-bottom:1px solid var(--line);margin:0}
+.xl-tbl th{background:var(--surface-2);color:var(--ink-2);white-space:normal}
 .xl-tbl td.xl-v{font-weight:600;white-space:nowrap}
 .xl-tbl td.hl{font-weight:700;color:var(--accent)}
 .xl-tbl tfoot th{background:var(--surface-2);color:var(--ink)}

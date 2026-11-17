@@ -1023,13 +1023,14 @@ $("#add-carga").onclick = () => {
   const it = {desc:"Carga manual", potencia:"1 CV", qtd:1, energia:""}; it.ed = {tipo:"MOTOR_3F", cv:1, w:null, qtd:1, nome, faixa:""};
   s.itens.push(it); state.vazio = false; render();
 };
-$("#btn-limpar").onclick = () => {
+function limparTudo(aviso){
   state.ped = {titulo:null, cliente:null, cidade:null, obs:"", sistemas:[]}; state.exemplo = false; state.compr = {}; state.vazio = true;
   $("#f-pedido").value = ""; $("#in-num").value = ""; $("#in-nome").value = ""; $("#cli").textContent = "—";
   $("#tensao-aviso").hidden = true;
   const pill = $("#src-pill"); pill.textContent = "Em branco"; pill.className = "pill";
-  render(); toast("Dados apagados. Carregue um pedido ou adicione as cargas.");
-};
+  render(); if (aviso) toast("Dados apagados. Carregue um pedido ou adicione as cargas.");
+}
+$("#btn-limpar").onclick = () => limparTudo(true);
 document.querySelectorAll("nav.tabs button").forEach(b => b.onclick = () => mostrar(b.dataset.view));
 function mostrar(v){
   document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === v)));
@@ -1200,7 +1201,7 @@ $("#reg-save").onclick = async () => {
   try { await gravarRegras(); } catch (e){ toast("Não foi possível salvar: " + (e.message || e)); }
 };
 /* =============================== INÍCIO =============================== */
-calc(); carregarPedido(EXEMPLO, true); renderRegras();
+calc(); carregarPedido(EXEMPLO, true); limparTudo(false); renderRegras();
 { const h = location.hash.slice(1); if (["dim","calc","reg"].includes(h)) mostrar(h); }
 (async () => {
   mostrarUsuario();

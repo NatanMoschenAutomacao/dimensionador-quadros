@@ -14,7 +14,7 @@
 :root{
   --bg:#F1F2EF; --surface:#FFFFFF; --surface-2:#F7F8F5; --line:#D9DCD4; --line-strong:#B9BDB2;
   --ink:#1D2125; --ink-2:#4B525A; --ink-3:#737B83;
-  --accent:#C9580F; --accent-ink:#FFFFFF; --accent-soft:#FBE8DA;
+  --accent:#C9580F; --accent-ink:#FFFFFF; --accent-soft:#FBE8DA; --xl-tag:#C5E0B4; --xl-tag-ink:#1E3A10; --xl-title:#FFC000; --xl-title-ink:#2A2000; --xl-head:#FFE699; --xl-head-ink:#2A2000;
   --ok:#2F7D4A; --ok-soft:#E1F1E6; --warn:#A86A00; --warn-soft:#FBF0D6; --bad:#B3261E; --bad-soft:#F9E0DE;
   --fR:#B8322A; --fS:#2B2F33; --fT:#7A7F86;
   --f-sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
@@ -24,13 +24,13 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#14171A; --surface:#1C2024; --surface-2:#22272C; --line:#30363C; --line-strong:#454C53;
   --ink:#E8EAEC; --ink-2:#B4BAC0; --ink-3:#8A9198;
-  --accent:#F08A3C; --accent-ink:#1A0E05; --accent-soft:#3A2414;
+  --accent:#F08A3C; --accent-ink:#1A0E05; --accent-soft:#3A2414; --xl-tag:#2E4A22; --xl-tag-ink:#D6EDC8; --xl-title:#6B5200; --xl-title-ink:#FFF3CC; --xl-head:#4A3D10; --xl-head-ink:#FFF0C2;
   --ok:#6CC38A; --ok-soft:#183324; --warn:#E3B04B; --warn-soft:#3A2E12; --bad:#F2867E; --bad-soft:#3D1A18;
   --fR:#F0776E; --fS:#D5D9DD; --fT:#8E959C; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#14171A; --surface:#1C2024; --surface-2:#22272C; --line:#30363C; --line-strong:#454C53;
   --ink:#E8EAEC; --ink-2:#B4BAC0; --ink-3:#8A9198;
-  --accent:#F08A3C; --accent-ink:#1A0E05; --accent-soft:#3A2414;
+  --accent:#F08A3C; --accent-ink:#1A0E05; --accent-soft:#3A2414; --xl-tag:#2E4A22; --xl-tag-ink:#D6EDC8; --xl-title:#6B5200; --xl-title-ink:#FFF3CC; --xl-head:#4A3D10; --xl-head-ink:#FFF0C2;
   --ok:#6CC38A; --ok-soft:#183324; --warn:#E3B04B; --warn-soft:#3A2E12; --bad:#F2867E; --bad-soft:#3D1A18;
   --fR:#F0776E; --fS:#D5D9DD; --fT:#8E959C; color-scheme:dark}
 *{box-sizing:border-box}
@@ -108,6 +108,36 @@ td.desc{white-space:normal;min-width:180px}
 .note{font-size:12px;color:var(--ink-3)}
 .warnbox{border-left:3px solid var(--warn);background:var(--warn-soft);padding:8px 10px;border-radius:0 4px 4px 0;font-size:13px}
 .calc-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;align-items:start}
+.subtabs{display:flex;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.subtabs button{font:inherit;font-size:13px;background:none;border:1px solid transparent;border-bottom:none;border-radius:4px 4px 0 0;padding:7px 12px;color:var(--ink-2);cursor:pointer;margin-bottom:-1px}
+.subtabs button[aria-selected="true"]{background:var(--surface);border-color:var(--line);color:var(--ink);font-weight:600}
+.sub{display:flex;flex-direction:column;gap:18px}
+.xl-tag{display:inline-block;align-self:flex-start;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;padding:3px 10px;border-radius:3px;background:var(--xl-tag);color:var(--xl-tag-ink)}
+.xl-title{font-size:15px;background:var(--xl-title);color:var(--xl-title-ink);padding:6px 10px;border-radius:3px;margin:0}
+.xl-tbl th{background:var(--xl-head);color:var(--xl-head-ink);white-space:normal}
+.xl-tbl td.xl-v{font-weight:600;white-space:nowrap}
+.xl-tbl td.hl{font-weight:700;color:var(--accent)}
+.xl-tbl tfoot th{background:var(--surface-2);color:var(--ink)}
+.xl-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,160px);gap:6px 12px;align-items:center}
+.xl-form label{font-size:13px;color:var(--ink-2)}
+.xl-form input,.xl-form select{width:100%}
+.formula-box{border:1px solid var(--line);border-radius:4px;background:var(--surface-2);padding:10px 12px;font-size:13px}
+.formula-box b{font-family:var(--f-mono);display:block;margin-bottom:6px}
+.formula-box dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;margin:0}
+.formula-box dt{font-family:var(--f-mono);font-weight:600}
+.formula-box dd{margin:0;color:var(--ink-2)}
+.conv-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px 18px}
+@media (max-width:700px){.conv-grid{grid-template-columns:minmax(0,1fr)}}
+.conv .xl-tbl input{width:100%!important;min-width:70px}
+.conv .xl-tbl td:first-child{width:50%}
+.conv{display:flex;flex-direction:column;gap:6px}
+.conv-h{font-size:13px;font-weight:700}
+.qt-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;align-items:start}
+.ele-grid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:18px;align-items:start}
+.ele-main,.ele-ref{display:flex;flex-direction:column;gap:18px;min-width:0}
+.note ul{margin:4px 0 0;padding-left:18px}
+.note p{margin:0}
+@media (max-width:760px){.ele-grid{grid-template-columns:minmax(0,1fr)}}
 .res{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;border-top:1px solid var(--line);padding-top:10px}
 .res span{color:var(--ink-2);font-size:13px}
 .res b{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
@@ -185,85 +215,104 @@ td input.w-txt{width:100%;min-width:140px}
 
 <!-- ============================ CALCULADORA ============================ -->
 <section class="view" id="view-calc" hidden>
-  <div><h1>Calculadora</h1><p class="sub">Mesmos cálculos da calculadora.xltm, com fator de segurança 1,25.</p></div>
-  <div class="calc-grid">
-    <div class="panel" id="c-motor">
-      <h2>Disjuntor para motor (indutivo)</h2>
-      <div class="row">
-        <div class="field"><label class="lbl" for="cm-cv">Potência (CV)</label><input type="number" id="cm-cv" value="1.5" step="0.01" class="num"></div>
-        <div class="field"><label class="lbl" for="cm-v">Alimentação</label><select id="cm-v"><option value="m220">220 mono</option><option value="t220" selected>220 trifásico</option><option value="t380">380 trifásico</option></select></div>
-        <div class="field"><label class="lbl" for="cm-ef">Rendimento</label><input type="number" id="cm-ef" value="0.75" step="0.01" class="num"></div>
-        <div class="field"><label class="lbl" for="cm-fp">FP</label><input type="number" id="cm-fp" value="0.72" step="0.01" class="num"></div>
-      </div>
+  <div><h1>Calculadora</h1><p class="sub">Mesma organização da calculadora.xltm: uma aba para cada planilha.</p></div>
+  <div class="subtabs" role="tablist" aria-label="Planilhas da calculadora">
+    <button role="tab" data-sub="amp" aria-selected="true">Calculadora (A)</button>
+    <button role="tab" data-sub="qt" aria-selected="false">Queda de Tensão</button>
+    <button role="tab" data-sub="dut" aria-selected="false">Eletroduto</button>
+    <button role="tab" data-sub="cal" aria-selected="false">Eletrocalha</button>
+  </div>
+
+  <!-- Calculadora (A) -->
+  <div class="sub" id="sub-amp">
+    <div class="panel xl">
+      <div class="xl-tag">Indutivo</div>
+      <h2 class="xl-title">Dimensionamento disjuntor para motor</h2>
+      <div class="tbl-wrap"><table class="xl-tbl">
+        <thead><tr><th>Potência mecânica (CV)</th><th>Tensão de alimentação</th><th class="n">Rendimento</th><th class="n">Fator potência</th><th class="n">Corrente (escala do disjuntor motor)</th><th class="n">Fator de segurança (×1,25)</th><th class="n">Faixa do disjuntor motor</th></tr></thead>
+        <tbody id="ind-body"></tbody>
+      </table></div>
       <div class="formula">I = CV × 736 / (V × [1,73] × η × FP)</div>
-      <div class="res" id="cm-res"></div>
     </div>
-    <div class="panel" id="c-res">
-      <h2>Disjuntor para carga resistiva</h2>
-      <div class="row">
-        <div class="field"><label class="lbl" for="cr-w">Potência (W)</label><input type="number" id="cr-w" value="3000" class="num"></div>
-        <div class="field"><label class="lbl" for="cr-v">Alimentação</label><select id="cr-v"><option value="m220">220 mono</option><option value="t220">220 trifásico</option><option value="t380">380 trifásico</option></select></div>
-      </div>
+    <div class="panel xl">
+      <div class="xl-tag">Resistivo</div>
+      <h2 class="xl-title">Dimensionamento disjuntor quando tem resistiva (aquecimento)</h2>
+      <div class="tbl-wrap"><table class="xl-tbl">
+        <thead><tr><th>Potência em W</th><th>Tensão de alimentação</th><th class="n">Corrente (escala do disjuntor)</th><th class="n">Fator de segurança (×1,25)</th><th class="n">Disjuntor comercial</th></tr></thead>
+        <tbody id="res-body"></tbody>
+      </table></div>
       <div class="formula">I = W / (V × [1,73])</div>
-      <div class="res" id="cr-res"></div>
     </div>
-    <div class="panel" id="c-rea">
-      <h2>Disjuntor para carga reativa (lâmpadas)</h2>
-      <div class="row">
-        <div class="field"><label class="lbl" for="ce-w">Potência (W)</label><input type="number" id="ce-w" value="1200" class="num"></div>
-        <div class="field"><label class="lbl" for="ce-v">Alimentação</label><select id="ce-v"><option value="m220">220 mono</option><option value="t220">220 trifásico</option><option value="t380">380 trifásico</option></select></div>
-        <div class="field"><label class="lbl" for="ce-fp">FP</label><input type="number" id="ce-fp" value="0.85" step="0.01" class="num"></div>
-      </div>
+    <div class="panel xl">
+      <div class="xl-tag">Reativo</div>
+      <h2 class="xl-title">Dimensionamento disjuntor reativo (lâmpada)</h2>
+      <div class="tbl-wrap"><table class="xl-tbl">
+        <thead><tr><th>Potência em W</th><th>Tensão de alimentação</th><th class="n">Fator potência</th><th class="n">Corrente (escala do disjuntor)</th><th class="n">Fator de segurança (×1,25)</th><th class="n">Disjuntor comercial</th></tr></thead>
+        <tbody id="rea-body"></tbody>
+      </table></div>
       <div class="formula">I = (W / FP) / (V × [1,73])</div>
-      <div class="res" id="ce-res"></div>
     </div>
-    <div class="panel" id="c-sec">
-      <h2>Seção do cabo por queda de tensão</h2>
-      <div class="row">
-        <div class="field"><label class="lbl" for="cs-t">Circuito</label><select id="cs-t"><option value="2">mono / bifásico</option><option value="1.732">trifásico</option></select></div>
-        <div class="field"><label class="lbl" for="cs-l">Comprimento (m)</label><input type="number" id="cs-l" value="50" class="num"></div>
-        <div class="field"><label class="lbl" for="cs-i">Corrente (A)</label><input type="number" id="cs-i" value="10" class="num"></div>
-        <div class="field"><label class="lbl" for="cs-v">Tensão (V)</label><input type="number" id="cs-v" value="220" class="num"></div>
-        <div class="field"><label class="lbl" for="cs-p">Queda adm. (%)</label><input type="number" id="cs-p" value="4" class="num"></div>
-      </div>
-      <div class="formula">S = (k × ρ × L × I) / (V × ΔV%) · ρ = 1/57 · k = 2 ou √3</div>
-      <div class="res" id="cs-res"></div>
-    </div>
-    <div class="panel" id="c-qt">
-      <h2>Queda de tensão de um circuito</h2>
-      <div class="row">
-        <div class="field"><label class="lbl" for="cq-t">Circuito</label><select id="cq-t"><option value="2">mono / bifásico</option><option value="1.732">trifásico</option></select></div>
-        <div class="field"><label class="lbl" for="cq-l">Comprimento (m)</label><input type="number" id="cq-l" value="50" class="num"></div>
-        <div class="field"><label class="lbl" for="cq-i">Corrente (A)</label><input type="number" id="cq-i" value="10" class="num"></div>
-        <div class="field"><label class="lbl" for="cq-v">Tensão (V)</label><input type="number" id="cq-v" value="220" class="num"></div>
-        <div class="field"><label class="lbl" for="cq-s">Seção (mm²)</label><select id="cq-s"></select></div>
-      </div>
-      <div class="formula">ΔV = k × L × (0,01754 / S) × I</div>
-      <div class="res" id="cq-res"></div>
-    </div>
-    <div class="panel" id="c-conv">
-      <h2>Conversões</h2>
-      <div class="row">
-        <div class="field"><label class="lbl" for="cv-x">Valor</label><input type="number" id="cv-x" value="1" step="any" class="num"></div>
-        <div class="field" style="flex:1 1 180px"><label class="lbl" for="cv-k">De → para</label>
-          <select id="cv-k">
-            <option value="cvw">CV → W (× 735,499)</option>
-            <option value="wcv">W → CV (× 0,00135962)</option>
-            <option value="hpw">HP → W (× 745,7)</option>
-            <option value="nmcv">Nm → CV (× 0,001341022)</option>
-            <option value="vaw">VA → W (× 0,8)</option>
-            <option value="wva">W → VA (× 1,25)</option>
-          </select></div>
-      </div>
-      <div class="res" id="cv-res"></div>
-    </div>
-    <div class="panel" id="c-ele">
-      <h2>Eletroduto e eletrocalha</h2>
-      <p class="note">Quantidade de cabos de cada bitola. A taxa de ocupação segue a NBR 5410 6.2.11.1.6 para eletroduto (53% com 1 cabo, 31% com 2, 40% com 3 ou mais) e é de 30% para eletrocalha.</p>
-      <div class="tbl-wrap"><table id="ele-tbl"></table></div>
-      <div class="res" id="ele-res"></div>
+    <div class="panel xl">
+      <div class="xl-tag">Conversões</div>
+      <div class="conv-grid" id="conv-grid"></div>
     </div>
   </div>
+
+  <!-- Queda de Tensão -->
+  <div class="sub" id="sub-qt" hidden>
+    <div class="qt-grid">
+      <div class="panel xl" data-k="2">
+        <div class="xl-tag">Monofásico / bifásico</div>
+        <div class="formula-box">
+          <b>S = (2 · ρ · L · Ib) / (Vnom · ΔV%)</b>
+          <dl><dt>S</dt><dd>seção do condutor (mm²)</dd><dt>ρ</dt><dd>resistividade do cobre = 1/57</dd><dt>L</dt><dd>comprimento do circuito (m)</dd><dt>Ib</dt><dd>corrente de projeto (A)</dd><dt>Vnom</dt><dd>tensão nominal (V)</dd><dt>ΔV%</dt><dd>queda admitida (máx. 4%)</dd></dl>
+        </div>
+        <h2 class="xl-title">Calculadora Seção do cabo</h2>
+        <div class="xl-form">
+          <label for="qs2-l">Comprimento (m)</label><input class="num" type="number" id="qs2-l" value="50">
+          <label for="qs2-i">Corrente de projeto (A)</label><input class="num" type="number" id="qs2-i" value="10">
+          <label for="qs2-v">Tensão nominal (V)</label><input class="num" type="number" id="qs2-v" value="220">
+          <label for="qs2-p">Queda admitida (%)</label><input class="num" type="number" id="qs2-p" value="4">
+        </div>
+        <div class="res" id="qs2-res"></div>
+        <h2 class="xl-title">Calculadora Queda de Tensão</h2>
+        <div class="xl-form">
+          <label for="qq2-l">Comprimento (m)</label><input class="num" type="number" id="qq2-l" value="50">
+          <label for="qq2-i">Corrente (A)</label><input class="num" type="number" id="qq2-i" value="10">
+          <label for="qq2-v">Tensão (V)</label><input class="num" type="number" id="qq2-v" value="220">
+          <label for="qq2-s">Seção (mm²)</label><select id="qq2-s" class="secsel"></select>
+        </div>
+        <div class="res" id="qq2-res"></div>
+      </div>
+      <div class="panel xl" data-k="1.732">
+        <div class="xl-tag">Trifásico</div>
+        <div class="formula-box">
+          <b>S = (√3 · ρ · L · Ib) / (Vnom · ΔV%)</b>
+          <dl><dt>S</dt><dd>seção do condutor (mm²)</dd><dt>ρ</dt><dd>resistividade do cobre = 1/57</dd><dt>L</dt><dd>comprimento do circuito (m)</dd><dt>Ib</dt><dd>corrente de projeto (A)</dd><dt>Vnom</dt><dd>tensão nominal (V)</dd><dt>ΔV%</dt><dd>queda admitida (máx. 4%)</dd></dl>
+        </div>
+        <h2 class="xl-title">Calculadora Seção do cabo</h2>
+        <div class="xl-form">
+          <label for="qs3-l">Comprimento (m)</label><input class="num" type="number" id="qs3-l" value="50">
+          <label for="qs3-i">Corrente de projeto (A)</label><input class="num" type="number" id="qs3-i" value="10">
+          <label for="qs3-v">Tensão nominal (V)</label><input class="num" type="number" id="qs3-v" value="380">
+          <label for="qs3-p">Queda admitida (%)</label><input class="num" type="number" id="qs3-p" value="4">
+        </div>
+        <div class="res" id="qs3-res"></div>
+        <h2 class="xl-title">Calculadora Queda de Tensão</h2>
+        <div class="xl-form">
+          <label for="qq3-l">Comprimento (m)</label><input class="num" type="number" id="qq3-l" value="50">
+          <label for="qq3-i">Corrente (A)</label><input class="num" type="number" id="qq3-i" value="10">
+          <label for="qq3-v">Tensão (V)</label><input class="num" type="number" id="qq3-v" value="380">
+          <label for="qq3-s">Seção (mm²)</label><select id="qq3-s" class="secsel"></select>
+        </div>
+        <div class="res" id="qq3-res"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Eletroduto / Eletrocalha (montados pelo JS) -->
+  <div class="sub" id="sub-dut" hidden></div>
+  <div class="sub" id="sub-cal" hidden></div>
 </section>
 
 <!-- ============================ REGRAS ============================ -->
@@ -990,45 +1039,113 @@ function mostrar(v){
 window.addEventListener("hashchange", () => { const h = location.hash.slice(1); if (["dim","calc","reg"].includes(h)) mostrar(h); });
 
 /* =============================== CALCULADORA =============================== */
-const V = k => ({m220:[220,1], t220:[220,1.73], t380:[380,1.73]}[k]);
-const val = id => parseFloat($(id).value.replace(",", ".")) || 0;
+const ALIM = [["220 mono",220,1],["220 trifásico",220,1.73],["380 trifásico",380,1.73]];
+const DISJ_COM = [2,4,6,10,16,20,25,32,40,50,63,80,100,125];
+const val = id => { const e = $(id); return e ? (parseFloat(String(e.value).replace(",", ".")) || 0) : 0; };
 const resHTML = arr => arr.map(([k,v,big]) => `<span>${k}</span><b${big?' class="big"':''}>${v}</b>`).join("");
-function calc(){
-  { const [v,k] = V($("#cm-v").value), cv = val("#cm-cv"), I = cv*736/(v*k*val("#cm-ef")*val("#cm-fp")), I2 = I*1.25;
-    const [lo,hi] = faixaQ({...state.R, params:{...state.R.params, FATOR_FAIXA_Q:1.25}}, I);
-    $("#cm-res").innerHTML = resHTML([["Corrente nominal", fmtN(I,2)+" A"],["Com fator 1,25", fmtN(I2,2)+" A"],["Faixa do disjuntor motor", `${fmtBR(lo)} – ${fmtBR(hi)} A`, true]]); }
-  { const [v,k] = V($("#cr-v").value), I = val("#cr-w")/(v*k);
-    $("#cr-res").innerHTML = resHTML([["Corrente", fmtN(I,2)+" A"],["Com fator 1,25", fmtN(I*1.25,2)+" A", true],["Disjuntor comercial", ([2,4,6,10,16,20,25,32,40,50,63].find(a=>a>=I*1.25)||"—")+" A"]]); }
-  { const [v,k] = V($("#ce-v").value), I = (val("#ce-w")/val("#ce-fp"))/(v*k);
-    $("#ce-res").innerHTML = resHTML([["Corrente", fmtN(I,2)+" A"],["Com fator 1,25", fmtN(I*1.25,2)+" A", true],["Disjuntor comercial", ([2,4,6,10,16,20,25,32,40,50,63].find(a=>a>=I*1.25)||"—")+" A"]]); }
-  { const k = +$("#cs-t").value, S = (k*(1/57)*val("#cs-l")*val("#cs-i"))/(val("#cs-v")*val("#cs-p")/100);
-    $("#cs-res").innerHTML = resHTML([["Seção mínima", fmtN(S,2)+" mm²"],["Seção comercial", (SECOES.find(x=>x>=S)||"> 150")+" mm²", true]]); }
-  { const k = +$("#cq-t").value, L = val("#cq-l"), I = val("#cq-i"), Vn = val("#cq-v"), S = +$("#cq-s").value;
-    const dv = k*L*(0.01754/S)*I, pct = Vn ? dv/Vn*100 : 0;
-    $("#cq-res").innerHTML = resHTML([["Queda de tensão", fmtN(dv,2)+" V"],["Tensão no fim da linha", fmtN(Vn-dv,2)+" V"],["Queda (%)", `<span class="pill ${pct>4?"bad":"ok"}">${fmtN(pct,2)}%</span>`, true]]); }
-  { const x = val("#cv-x"), f = {cvw:[735.499,"W"], wcv:[0.00135962,"CV"], hpw:[745.7,"W"], nmcv:[0.001341022,"CV"], vaw:[0.8,"W"], wva:[1.25,"VA"]}[$("#cv-k").value];
-    $("#cv-res").innerHTML = resHTML([["Resultado", fmtN(x*f[0], 4)+" "+f[1], true]]); }
-  calcEle();
+const inpN = (id, v, step="any", w=80) => `<input class="num" type="number" id="${id}" value="${v}" step="${step}" style="width:${w}px" aria-label="${id}">`;
+const CONVS = [["nmcv","Nm para CV","Nm","CV",0.001341022,1],["wcv","W para CV","W","CV",0.00135962,1000],["cvw","CV para W","CV","W",735.499,1],["hpw","HP para W","HP","W",745.7,1],["vaw","VA para W","VA","W",0.8,1000],["wva","W para VA","W","VA",1.25,1000]];
+function montarAmp(){
+  const defCV = [0.5,1.5,3], defW = [3000,3000,6000], defL = [1200,1200,1200];
+  $("#ind-body").innerHTML = ALIM.map(([n],i) => `<tr><td>${inpN("ind-cv-"+i, defCV[i], "0.01")}</td><td class="xl-v">${n}</td><td class="n">${inpN("ind-ef-"+i,0.75,"0.01",64)}</td><td class="n">${inpN("ind-fp-"+i,0.72,"0.01",64)}</td><td class="n mono" id="ind-i-${i}"></td><td class="n mono" id="ind-s-${i}"></td><td class="n mono hl" id="ind-q-${i}"></td></tr>`).join("");
+  $("#res-body").innerHTML = ALIM.map(([n],i) => `<tr><td>${inpN("res-w-"+i, defW[i], "1", 96)}</td><td class="xl-v">${n}</td><td class="n mono" id="res-i-${i}"></td><td class="n mono" id="res-s-${i}"></td><td class="n mono hl" id="res-d-${i}"></td></tr>`).join("");
+  $("#rea-body").innerHTML = ALIM.map(([n],i) => `<tr><td>${inpN("rea-w-"+i, defL[i], "1", 96)}</td><td class="xl-v">${n}</td><td class="n">${inpN("rea-fp-"+i,0.85,"0.01",64)}</td><td class="n mono" id="rea-i-${i}"></td><td class="n mono" id="rea-s-${i}"></td><td class="n mono hl" id="rea-d-${i}"></td></tr>`).join("");
+  $("#conv-grid").innerHTML = CONVS.map(([k,t,a,b,f,d]) => `<div class="conv"><div class="conv-h">${t}</div><table class="xl-tbl"><thead><tr><th>${a}</th><th class="n">${b}</th></tr></thead><tbody><tr><td>${inpN("cv-"+k, d, "any", 96)}</td><td class="n mono hl" id="cvr-${k}"></td></tr></tbody></table><div class="note">× ${String(f).replace(".", ",")}</div></div>`).join("");
 }
 /* eletroduto / eletrocalha */
 const CABOS = [["2,5mm",3.3],["4mm",5.83],["10mm",7.5],["16mm",8.46],["25mm",10.5],["150mm",21.53],["2x1,5mm",7.8],["2x2,5mm",8.8],["2x4mm",11.2],["3x1,5mm",8.4],["3x2,5mm",9.7],["3x4mm",12.1],["4x1,5mm",9.5],["4x2,5mm",10.6],["4x4mm",13.5],["4x6mm",15.1],["4x10mm",16],["4x16mm",20]];
-const ELETRODUTOS = [["3/4\"",20],["1\"",26],["1.1/4\"",30.3],["1.1/2\"",40.7],["2\"",52.3],["3\"",75],["4\"",83]];
-const CALHAS = [["38x38",38*38],["50x50",2500],["50x75",3750],["50x100",5000],["75x75",5625],["75x100",7500],["100x100",10000]];
-const eleQtd = {"2,5mm":0};
+const ELETRODUTOS = [["3/4\"",25,20],["1\"",32,26],["1.1/4\"",40.5,30.3],["1.1/2\"",50.5,40.7],["2\"",63.5,52.3],["3\"",90.2,75],["4\"",99,83]];
+const CALHAS = [["38x38",38,38],["50x50",50,50],["50x75",50,75],["50x100",50,100],["75x75",75,75],["75x100",75,100],["100x100",100,100]];
+const PI_XL = 3.14; /* a planilha usa 3,14 */
+const areaCabo = d => PI_XL*d*d/4;
+const ELE = {
+  dut: { nome:"Eletroduto", artigo:"do eletroduto", taxa:40, itens:ELETRODUTOS, area:([,,di]) => PI_XL*di*di/4,
+         cols:["Bitola","Ø externo (mm)","Ø interno (mm)"], row:([b,de,di]) => [b, fmtN(de,1), fmtN(di,1)], escolha:"Qual eletroduto será usado", def:"1\"", acima:"maior que 4\"",
+         notas:`<p><b>NBR 5410:2004 · 6.2.11.1.6 · Eletrodutos</b></p><ul><li>53% de ocupação no caso de 1 condutor</li><li>31% de ocupação no caso de 2 condutores</li><li>40% de ocupação no caso de 3 ou mais condutores</li></ul>` },
+  cal: { nome:"Eletrocalha", artigo:"da eletrocalha", taxa:30, itens:CALHAS, area:([,h,l]) => h*l,
+         cols:["Modelo","Altura","Largura"], row:([m,h,l]) => [m, h, l], escolha:"Qual eletrocalha será usada", def:"50x50", acima:"maior que 100x100",
+         notas:`<p><b>Eletrocalha</b></p><ul><li>Área total = altura × largura</li><li>Taxa de ocupação usual: 30%</li></ul>` }
+};
 function montarEle(){
-  $("#ele-tbl").innerHTML = `<thead><tr><th>Cabo</th><th class="n">Ø ext. (mm)</th><th class="n">Qtd</th><th class="n">Área (mm²)</th></tr></thead><tbody>` +
-    CABOS.map(([b,d],i) => `<tr><td class="mono">${b}</td><td class="n">${fmtN(d,2)}</td><td class="n"><input class="num" type="number" min="0" step="1" id="el-${i}" value="${b==="2,5mm"?12:0}" style="width:64px" aria-label="Quantidade de ${b}"></td><td class="n" id="ela-${i}">—</td></tr>`).join("") + `</tbody>`;
-  CABOS.forEach((_,i) => $("#el-"+i).oninput = calcEle);
+  for (const [p, E] of Object.entries(ELE)) {
+    $("#sub-"+p).innerHTML = `<div class="ele-grid">
+      <div class="ele-main">
+        <div class="panel xl">
+          <div class="formula-box"><b>Área ocupável de um cabo: A = (π · D²) / 4</b><dl><dt>π</dt><dd>3,14</dd><dt>D</dt><dd>diâmetro externo do cabo</dd></dl></div>
+          <div class="note">${E.notas}</div>
+        </div>
+        <div class="panel xl">
+          <h2 class="xl-title">Calculadora de capacidade ${E.artigo}</h2>
+          <div class="xl-form">
+            <label for="${p}-cab">Qual bitola do cabo a ser usado</label><select id="${p}-cab">${CABOS.map(([b])=>`<option${b==="2,5mm"?" selected":""}>${b}</option>`).join("")}</select>
+            <label for="${p}-mod">${E.escolha}</label><select id="${p}-mod">${E.itens.map(([m])=>`<option${m===E.def?" selected":""}>${esc(m)}</option>`).join("")}</select>
+            <label for="${p}-tx">Taxa de ocupação (%)</label><input class="num" type="number" id="${p}-tx" value="${E.taxa}">
+          </div>
+          <div class="res" id="${p}-cap"></div>
+        </div>
+        <div class="panel xl">
+          <h2 class="xl-title">Calculadora de qual ${p==="dut"?"o melhor eletroduto":"a melhor eletrocalha"}</h2>
+          <div class="tbl-wrap"><table class="xl-tbl"><thead><tr><th>Bitola</th><th class="n">Quantidade</th><th class="n">Área da seção total do cabo (mm²)</th></tr></thead><tbody>` +
+          CABOS.map(([b],i) => `<tr><td class="mono">${b}</td><td class="n">${inpN(`${p}-q-${i}`, b==="2,5mm"?12:0, "1", 64)}</td><td class="n mono" id="${p}-a-${i}">—</td></tr>`).join("") +
+          `</tbody><tfoot><tr><th>Total</th><th class="n mono" id="${p}-tq"></th><th class="n mono" id="${p}-ta"></th></tr></tfoot></table></div>
+          <div class="res" id="${p}-best"></div>
+        </div>
+      </div>
+      <div class="ele-ref">
+        <div class="panel xl">
+          <div class="xl-tag">${E.nome}</div>
+          <div class="tbl-wrap"><table class="xl-tbl"><thead><tr>${E.cols.map((c,i)=>`<th${i?' class="n"':''}>${c}</th>`).join("")}<th class="n">Área (mm²)</th><th class="n">Área útil (mm²)</th></tr></thead><tbody id="${p}-ref"></tbody></table></div>
+        </div>
+        <div class="panel xl">
+          <div class="xl-tag">Cabo</div>
+          <div class="tbl-wrap"><table class="xl-tbl"><thead><tr><th>Bitola</th><th class="n">Ø externo (mm)</th></tr></thead><tbody>${CABOS.map(([b,d])=>`<tr><td class="mono">${b}</td><td class="n mono">${fmtN(d,2)}</td></tr>`).join("")}</tbody></table></div>
+        </div>
+      </div>
+    </div>`;
+  }
 }
 function calcEle(){
-  let area = 0, n = 0;
-  CABOS.forEach(([b,d],i) => { const q = +$("#el-"+i).value || 0, a = Math.PI*d*d/4*q; n += q; area += a; $("#ela-"+i).textContent = q ? fmtN(a,1) : "—"; });
-  const occ = n <= 1 ? 0.53 : n === 2 ? 0.31 : 0.40;
-  const dut = ELETRODUTOS.find(([,di]) => Math.PI*di*di/4*occ >= area);
-  const cal = CALHAS.find(([,a]) => a*0.30 >= area);
-  $("#ele-res").innerHTML = resHTML([["Cabos / área total", `${n} · ${fmtN(area,1)} mm²`],[`Eletroduto (ocupação ${Math.round(occ*100)}%)`, dut ? dut[0] : "maior que 4\"", true],["Eletrocalha (ocupação 30%)", cal ? cal[0] : "100x150 ou maior", true]]);
+  for (const [p, E] of Object.entries(ELE)) {
+    const tx = val(`#${p}-tx`)/100;
+    $(`#${p}-ref`).innerHTML = E.itens.map(it => `<tr>${E.row(it).map((c,i)=>`<td class="${i?"n mono":"mono"}">${esc(String(c))}</td>`).join("")}<td class="n mono">${fmtN(E.area(it),1)}</td><td class="n mono">${fmtN(E.area(it)*tx,1)}</td></tr>`).join("");
+    const cab = CABOS.find(([b]) => b === $(`#${p}-cab`).value), mod = E.itens.find(([m]) => m === $(`#${p}-mod`).value);
+    const ac = areaCabo(cab[1]), at = E.area(mod), au = at*tx;
+    $(`#${p}-cap`).innerHTML = resHTML([["Diâmetro externo do cabo", fmtN(cab[1],2)+" mm"],["Área da seção transversal do cabo", fmtN(ac,2)+" mm²"],[`Área total ${E.artigo}`, fmtN(at,2)+" mm²"],[`Área útil ${E.artigo}`, fmtN(au,2)+" mm²"],["Quantidade de cabos", fmtN(Math.floor(au/ac),0), true]]);
+    let n = 0, area = 0;
+    CABOS.forEach(([,d],i) => { const q = val(`#${p}-q-${i}`), a = areaCabo(d)*q; n += q; area += a; $(`#${p}-a-${i}`).textContent = q ? fmtN(a,2) : "—"; });
+    $(`#${p}-tq`).textContent = fmtN(n,0); $(`#${p}-ta`).textContent = fmtN(area,2);
+    const best = E.itens.find(it => E.area(it)*tx >= area);
+    $(`#${p}-best`).innerHTML = resHTML([[`Modelo de ${E.nome.toLowerCase()} (ocupação ${fmtN(tx*100,0)}%)`, best ? esc(best[0]) : E.acima, true]]);
+  }
 }
-$("#cq-s").innerHTML = SECOES.map(s => `<option value="${s}"${s===2.5?" selected":""}>${fmtBR(s)}</option>`).join("");
+function calc(){
+  ALIM.forEach(([,v,k],i) => {
+    const I = val("#ind-cv-"+i)*736/(v*k*val("#ind-ef-"+i)*val("#ind-fp-"+i)), I2 = I*1.25;
+    const [lo,hi] = faixaQ({...state.R, params:{...state.R.params, FATOR_FAIXA_Q:1.25}}, isFinite(I) ? I : 0);
+    $("#ind-i-"+i).textContent = isFinite(I) ? fmtN(I,2) : "—"; $("#ind-s-"+i).textContent = isFinite(I2) ? fmtN(I2,2) : "—";
+    $("#ind-q-"+i).textContent = isFinite(I) ? `${fmtBR(lo)} a ${fmtBR(hi)} A` : "—";
+    const Ir = val("#res-w-"+i)/(v*k);
+    $("#res-i-"+i).textContent = fmtN(Ir,2); $("#res-s-"+i).textContent = fmtN(Ir*1.25,2); $("#res-d-"+i).textContent = (DISJ_COM.find(a=>a>=Ir*1.25)||"—")+" A";
+    const Ie = (val("#rea-w-"+i)/(val("#rea-fp-"+i)||1))/(v*k);
+    $("#rea-i-"+i).textContent = fmtN(Ie,2); $("#rea-s-"+i).textContent = fmtN(Ie*1.25,2); $("#rea-d-"+i).textContent = (DISJ_COM.find(a=>a>=Ie*1.25)||"—")+" A";
+  });
+  CONVS.forEach(([k,,,b,f]) => $("#cvr-"+k).textContent = fmtN(val("#cv-"+k)*f, 4));
+  [["2",2],["3",1.732]].forEach(([s,k]) => {
+    const S = (k*(1/57)*val(`#qs${s}-l`)*val(`#qs${s}-i`))/(val(`#qs${s}-v`)*val(`#qs${s}-p`)/100);
+    $(`#qs${s}-res`).innerHTML = resHTML([["Seção do cabo calculada", (isFinite(S)?fmtN(S,2):"—")+" mm²"],["Seção comercial", (SECOES.find(x=>x>=S) ? fmtBR(SECOES.find(x=>x>=S)) : "> 150")+" mm²", true]]);
+    const L = val(`#qq${s}-l`), I = val(`#qq${s}-i`), Vn = val(`#qq${s}-v`), Sx = +$(`#qq${s}-s`).value;
+    const dv = k*L*(0.01754/Sx)*I, pct = Vn ? dv/Vn*100 : 0;
+    $(`#qq${s}-res`).innerHTML = resHTML([["Queda de tensão", fmtN(dv,2)+" V"],["Tensão no final da linha", fmtN(Vn-dv,2)+" V"],["Queda (%)", `<span class="pill ${pct>4?"bad":"ok"}">${fmtN(pct,2)}%</span>`, true]]);
+  });
+  calcEle();
+}
+function mostrarSub(s){
+  document.querySelectorAll(".subtabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.sub === s)));
+  ["amp","qt","dut","cal"].forEach(k => $("#sub-"+k).hidden = k !== s);
+}
+document.querySelectorAll(".subtabs button").forEach(b => b.onclick = () => mostrarSub(b.dataset.sub));
+montarAmp(); montarEle();
+document.querySelectorAll(".secsel").forEach(el => el.innerHTML = SECOES.map(s => `<option value="${s}"${s===2.5?" selected":""}>${fmtBR(s)}</option>`).join(""));
 document.querySelectorAll("#view-calc input, #view-calc select").forEach(el => el.addEventListener("input", calc));
 
 /* =============================== REGRAS (UI) =============================== */
@@ -1083,7 +1200,7 @@ $("#reg-save").onclick = async () => {
   try { await gravarRegras(); } catch (e){ toast("Não foi possível salvar: " + (e.message || e)); }
 };
 /* =============================== INÍCIO =============================== */
-montarEle(); calc(); carregarPedido(EXEMPLO, true); renderRegras();
+calc(); carregarPedido(EXEMPLO, true); renderRegras();
 { const h = location.hash.slice(1); if (["dim","calc","reg"].includes(h)) mostrar(h); }
 (async () => {
   mostrarUsuario();
